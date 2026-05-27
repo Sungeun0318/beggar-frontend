@@ -1,19 +1,105 @@
 # Flutter
 *.dart_tool/
+.dart_tool/
 .packages
 .pub/
+.pub-cache/
 build/
 .flutter-plugins
 .flutter-plugins-dependencies
+pubspec.lock
+
+# iOS
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+ios/Flutter/Generated.xcconfig
+ios/Flutter/ephemeral/
+ios/Flutter/App.framework
+ios/Flutter/engine/
+ios/Runner.xcworkspace/xcshareddata/
+ios/Runner.xcodeproj/xcuserdata/
+ios/Runner.xcodeproj/project.xcworkspace/xcuserdata/
+
+# Android
+android/.gradle/
+android/local.properties
+android/key.properties
+android/*.jks
+android/*.keystore
+android/app/debug/
+android/app/profile/
+android/app/release/
+**/GeneratedPluginRegistrant.*
 
 # IDE
 .idea/
 .vscode/
 *.iml
+*.swp
+*.swo
+*~
 
 # macOS
 .DS_Store
+**/.DS_Store
+._*
 
-# Env
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# Linux
+*~
+.directory
+
+# Env / Secrets
 .env
+.env.*
 *.env.local
+*.pem
+*.p12
+*.key
+*.cert
+google-services.json
+GoogleService-Info.plist
+
+# AI Tools
+.claude/
+CLAUDE.md
+.cursor/
+.cursorignore
+.cursorules
+.copilot/
+.github/copilot/
+.aider*
+.windsurf/
+.bolt/
+.codeium/
+.tabnine*
+.cody/
+.continue/
+.codex/
+.amazonq/
+.ai/
+
+# Coverage / Test
+coverage/
+*.lcov
+test-results/
+
+# Logs
+*.log
+logs/
+crash_log.txt
+
+# Misc
+*.bak
+*.tmp
+*.temp
+*.orig
+.fvm/
