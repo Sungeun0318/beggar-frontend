@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:beggar_app/core/theme/app_colors.dart';
 import 'package:beggar_app/data/mock/mock_db.dart';
 import 'package:beggar_app/features/auth/login_screen.dart';
+import 'package:beggar_app/features/auth/my_page_screen.dart';
 import 'package:beggar_app/features/auth/signup_screen.dart';
 import 'package:beggar_app/features/budget/budget_input_screen.dart';
 import 'package:beggar_app/features/budget/budget_result_screen.dart';
 import 'package:beggar_app/features/home/home_screen.dart';
+import 'package:beggar_app/features/home/ranking_screen.dart';
 import 'package:beggar_app/features/placeholders/placeholder_tab_screen.dart';
 import 'package:beggar_app/features/receipts/receipts_screen.dart';
 import 'package:beggar_app/features/recommendation/recommendation_screen.dart';
@@ -101,17 +103,9 @@ class _PrototypeShellState extends State<PrototypeShell> {
           onCreate: () => _go(PrototypePage.createRoom),
         );
       case PrototypePage.ranking:
-        child = const PlaceholderTabScreen(
-          title: '랭킹',
-          icon: Icons.emoji_events_outlined,
-          body: '명예의 거지 전당은 거지력 지수와 절약률 기준으로 보여줄 예정이에요.',
-        );
+        child = const RankingScreen();
       case PrototypePage.myPage:
-        child = PlaceholderTabScreen(
-          title: '마이',
-          icon: Icons.person_outline,
-          body: '${MockDb.currentUser.name}님의 계정과 참여한 거지방을 관리해요.',
-        );
+        child = const MyPageScreen();
     }
 
     final showBottomNav = switch (_page) {
