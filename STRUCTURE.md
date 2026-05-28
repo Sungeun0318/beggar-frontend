@@ -1,7 +1,7 @@
 # 프론트엔드 파일 구조 & 기능 설명
 
-> `frontend/lib/` 내 47개 Dart 파일의 역할, 화면 구성, 기능, 의존성 정리
-> 디자인 토큰 / 색상 / 텍스트 스타일은 [`FRONTEND_FILES.md`](./FRONTEND_FILES.md) 참고
+> `frontend/lib/` 내 50개 Dart 파일의 역할, 화면 구성, 기능, 의존성 정리
+> 마지막 갱신: 2026-05-28 (랭킹/마이페이지 정식 화면 승격 반영)
 
 ---
 
@@ -23,14 +23,33 @@ lib/
 ├── data/
 │   ├── models/                     도메인 모델 (User, Room, Member, BudgetResult, Receipt)
 │   ├── mock/mock_db.dart           샘플 데이터 인스턴스
-│   ├── api/api_client.dart         HTTP 클라이언트 (TODO)
+│   ├── api/api_client.dart         HTTP 클라이언트 (TODO — dio 미도입)
 │   ├── auth/
-│   │   ├── kakao_auth_service.dart 카카오 SDK 래퍼 (TODO)
-│   │   └── token_storage.dart      JWT 저장 (구현됨)
+│   │   ├── kakao_auth_service.dart 카카오 SDK 래퍼 (TODO — Kakao SDK 미연동)
+│   │   └── token_storage.dart      JWT 저장 (shared_preferences 구현 완료)
 │   └── repositories/               4개 추상 인터페이스 (TODO 구현체)
 ├── shared/widgets/                 공용 위젯 16개
-└── features/                       화면 12개 (도메인별 폴더)
+└── features/                       화면 13개 (도메인별 폴더, placeholder 포함)
 ```
+
+### 화면 구현 상태 요약
+
+| 화면 | 파일 | 백엔드 연동 |
+|---|---|---|
+| 스플래시 | `splash/splash_screen.dart` | 자동 로그인 분기 TODO |
+| 로그인 | `auth/login_screen.dart` | KakaoAuthService TODO |
+| 회원가입 | `auth/signup_screen.dart` | AuthRepository TODO |
+| 마이페이지 | `auth/my_page_screen.dart` | 사용자 정보/로그아웃 TODO |
+| 홈 | `home/home_screen.dart` | RoomRepository.myRooms TODO |
+| 랭킹 | `home/ranking_screen.dart` | 거지력 지수 API TODO |
+| 거지방 생성 | `room/create_room_screen.dart` | RoomRepository.create TODO |
+| 친구 초대 | `room/invite_room_screen.dart` | 입장 현황 폴링 TODO |
+| 진행 중 | `room/active_room_screen.dart` | 실시간 지출 동기화 TODO |
+| 예산 입력 | `budget/budget_input_screen.dart` | BudgetRepository.submit TODO |
+| 예산 결과 | `budget/budget_result_screen.dart` | BudgetRepository.result TODO |
+| 추천 | `recommendation/recommendation_screen.dart` | Python AI 서버 연동 TODO |
+| 지출 내역 | `receipts/receipts_screen.dart` | ReceiptRepository.listAll TODO |
+| (기타 탭 placeholder) | `placeholders/placeholder_tab_screen.dart` | 사실상 사용 안 함 |
 
 ---
 
@@ -241,7 +260,7 @@ JWT 액세스/리프레시 토큰 영속화. **구현 완료** (shared_preferenc
 
 ---
 
-## features/ — 화면 12개
+## features/ — 화면 13개 (+ placeholder 위젯 1개)
 
 ### splash/
 
@@ -361,14 +380,49 @@ JWT 액세스/리프레시 토큰 영속화. **구현 완료** (shared_preferenc
   3. 2024.05.05 오아시스 한남 52,000원
 - props: `onCreate`, `onBack?` (옵션)
 
-### placeholders/
+### home/ (랭킹 추가)
+
+#### `lib/features/home/ranking_screen.dart`
+**거지 랭킹 (명예의 거지 전당)**. 하단 탭 3번째.
+- 헤더: 로고(36px) + "거지 우정 수호대" 타이틀 (top 55)
+- 섹션 타이틀: "거지 랭킹" (top 119, 20pt w600)
+- ListView.separated: 15명 (top 173부터, 카드 간격 10px, 하단 padding 120)
+- 1~3위 메달 그라데이션 + 흰색 텍스트 + 추가 그림자
+  - 1위: `#FFE7A2 → #FFFBD0` 골드
+  - 2위: `#F4F4F4 → #8E8E8E` 실버
+  - 3위: `#FFDBA9 → #D0701B` 브론즈
+- 4위~: 일반 흰 배경 카드 (높이 79, radius 16)
+- 행 구성: `{rank}위` 25pt → 아바타 원(44px) → 이름 15pt w700 → trophy/face 아이콘 40px
+- **현재 mock**: 1~3위 "박진감", 4위 이하 "거지가 아닙니다"로 하드코딩
+- **백엔드 연동 시**: `/api/ranking?limit=15` 등에서 거지력 지수 기준 정렬된 사용자 받아오기
+
+### auth/ (마이페이지 추가)
+
+#### `lib/features/auth/my_page_screen.dart`
+**마이 페이지**. 하단 탭 4번째 (가장 우측).
+- 헤더: 로고 + 앱 이름 (랭킹과 동일 패턴)
+- 섹션 타이틀: "마이 페이지" (top 119)
+- SingleChildScrollView (top 170, 좌우 padding 24)
+- 프로필 카드 (accentBg, 높이 98)
+  - 좌측: 흰 원형 아바타 78px (face 아이콘)
+  - 우측: "어서 오쇼!" 라벨 + `{currentUser.name} 님` (22pt w900 + 16pt sub)
+- 메뉴 카드 2개 (높이 76, 좌측 54px 아이콘 박스 + 제목/서브타이틀)
+  1. 프로필 사진 변경 (`folder_shared_outlined`)
+  2. 이메일 확인 (`mail_outline`, subtitle = `currentUser.email`)
+- 이미지 갤러리 placeholder 2칸 (각 97×97 흰 카드, `image_outlined` 아이콘)
+- 계정 섹션 (흰 카드 + 미세 그림자)
+  - 계정 생성일 "2026.05.05" 하드코딩
+  - 디바이더
+  - 로그아웃 (16pt sub)
+  - 탈퇴하기 (13pt 흐린 갈색 `#3D8C7E6A`)
+- **현재 mock**: 사용자 정보는 `MockDb.currentUser`, 생성일은 텍스트 상수
+- **백엔드 연동 시**: 로그아웃 탭 → `KakaoAuthService.signOut()` + `TokenStorage.clear()`, 탈퇴 탭 → `DELETE /api/users/me`
+
+### placeholders/ (사실상 사용 안 됨, 보존 중)
 
 #### `lib/features/placeholders/placeholder_tab_screen.dart`
-**랭킹/마이 임시 화면**. 아직 구현 안 된 탭들.
+**범용 미구현 탭 placeholder 위젯**. 현재 prototype_shell에서 더 이상 라우팅되지 않음 (랭킹/마이가 정식 화면으로 승격). 향후 새 탭 추가 시 공통 placeholder로 재활용 가능.
 - 가운데: accent 원형 아이콘 + 제목 + 설명 텍스트
-- 사용처:
-  - 랭킹 탭: "명예의 거지 전당은 거지력 지수와 절약률 기준으로 보여줄 예정이에요."
-  - 마이 탭: "{username}님의 계정과 참여한 거지방을 관리해요."
 - props: `title`, `icon`, `body`
 
 ---
@@ -381,6 +435,8 @@ JWT 액세스/리프레시 토큰 영속화. **구현 완료** (shared_preferenc
 4. **CreateRoom** → Invite → BudgetInput → BudgetResult → Recommendation → ActiveRoom
 5. **ActiveRoom**: 영수증 추가 → Receipts / 추천 보기 등
 6. **하단 탭**: Home(0) / Receipts(1) / [추가FAB→CreateRoom] / Ranking(3) / MyPage(4)
+7. **Ranking** (탭3): 거지력 지수 기준 15명 순위판
+8. **MyPage** (탭4): 프로필 + 메뉴 + 계정 관리 (로그아웃/탈퇴)
 
 ---
 
@@ -394,3 +450,26 @@ JWT 액세스/리프레시 토큰 영속화. **구현 완료** (shared_preferenc
 6. 화면에서 `MockDb.xxx` → `context.read<XxxRepository>().xxx()` 호출로 점진적 교체
 7. `prototype_shell.dart`를 `go_router`로 교체 + 인증 가드
 8. `core/config/api_config.dart`에 운영/스테이징 baseUrl 분기 추가
+9. 랭킹/마이페이지에 신규 Repository 추가 (`RankingRepository`, `UserProfileRepository`)
+
+---
+
+## 화면별 ↔ 백엔드 API 매핑 (예정)
+
+> DB는 `docs/DB_DESIGN.md`의 8개 테이블 (시트 7개 + 거지력 점수 1개)
+> 추천은 Python AI 중계만 (채택률 트래킹 없음), 랭킹은 `user_beggar_scores` 기반
+
+| 화면 | 호출할 API (예시 경로) | 주체 Repository | 주 테이블 |
+|---|---|---|---|
+| Login | `POST /auth/kakao` | AuthRepository | users (+ user_beggar_scores 신규 가입 시 INSERT) |
+| Signup | (카카오 첫 로그인 시 users 자동 생성) | AuthRepository | users |
+| MyPage | `GET /users/me` / `GET /users/me/beggar-score` / `POST /auth/signout` / `DELETE /users/me` | AuthRepository, UserProfileRepository (신규), BeggarScoreRepository (신규) | users, user_beggar_scores |
+| Home | `GET /rooms/my` | RoomRepository | rooms ⋈ room_members |
+| CreateRoom | `POST /rooms` (tags 동시 등록) | RoomRepository | rooms, room_purpose_tags |
+| Invite | `POST /rooms/join` (입장) / `GET /rooms/{no}/members` (폴링) | RoomRepository | room_members |
+| BudgetInput | `POST /rooms/{no}/budget` | BudgetRepository | budgets |
+| BudgetResult | `POST /rooms/{no}/budget/confirm` / `GET /rooms/{no}/budget/result` | BudgetRepository | room_budget_results |
+| Recommendation | `GET /rooms/{no}/recommend` (Spring → Python 중계, DB 미적재) | RecommendationRepository (신규) | (없음 — 호출 시점 사용) |
+| ActiveRoom | `GET /rooms/{no}` + `GET /receipts?roomNo=...` | RoomRepository, ReceiptRepository | rooms, receipts (영수증 변경 → user_beggar_scores 재계산 트리거) |
+| Receipts | `POST /receipts` / `PATCH /receipts/{id}` / `GET /receipts?roomNo=...&sort=created_at,desc` | ReceiptRepository | receipts (변경 시 거지력 재계산) |
+| Ranking | `GET /ranking?limit=15` | RankingRepository (신규) | user_beggar_scores ⋈ users (score DESC) |

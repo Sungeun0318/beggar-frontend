@@ -1,15 +1,32 @@
-# Flutter
-*.dart_tool/
+# ─────────────────────────────────────────────────────────────────────
+# Flutter / Dart
+# ─────────────────────────────────────────────────────────────────────
 .dart_tool/
+**/.dart_tool/
 .packages
 .pub/
 .pub-cache/
 build/
 .flutter-plugins
 .flutter-plugins-dependencies
-pubspec.lock
+.fvm/
 
+# pubspec.lock 은 앱이라 커밋함 (5인 협업에서 패키지 버전 일치 위해)
+# (라이브러리였다면 ignore)
+
+# 코드 생성기 산출물 (build_runner 쓰면 주석 해제)
+# *.g.dart
+# *.freezed.dart
+# *.gr.dart
+# *.config.dart
+# *.mocks.dart
+
+# 다국어 자동 생성 (intl 사용 시)
+# lib/generated/
+
+# ─────────────────────────────────────────────────────────────────────
 # iOS
+# ─────────────────────────────────────────────────────────────────────
 ios/Pods/
 ios/.symlinks/
 ios/Flutter/Flutter.framework
@@ -18,12 +35,25 @@ ios/Flutter/Generated.xcconfig
 ios/Flutter/ephemeral/
 ios/Flutter/App.framework
 ios/Flutter/engine/
+ios/Flutter/flutter_export_environment.sh
+ios/ServiceDefinitions.json
+ios/Runner/GeneratedPluginRegistrant.*
 ios/Runner.xcworkspace/xcshareddata/
 ios/Runner.xcodeproj/xcuserdata/
 ios/Runner.xcodeproj/project.xcworkspace/xcuserdata/
 
+# Xcode 개인 작업 상태
+**/xcuserdata/
+**/*.xcuserstate
+**/*.xcuserdatad/
+
+# Podfile.lock 은 커밋 (Flutter 앱 권장)
+
+# ─────────────────────────────────────────────────────────────────────
 # Android
+# ─────────────────────────────────────────────────────────────────────
 android/.gradle/
+android/captures/
 android/local.properties
 android/key.properties
 android/*.jks
@@ -31,44 +61,111 @@ android/*.keystore
 android/app/debug/
 android/app/profile/
 android/app/release/
+android/app/src/main/jniLibs/
 **/GeneratedPluginRegistrant.*
 
-# IDE
-.idea/
-.vscode/
+# Android Studio
 *.iml
+.idea_modules/
+
+# AAB / APK 빌드 산출물 (build/ 아래라 이미 잡히지만 명시)
+*.apk
+*.aab
+*.ap_
+
+# ─────────────────────────────────────────────────────────────────────
+# 데스크톱 빌드 타깃 (macOS / Linux / Windows)
+# ─────────────────────────────────────────────────────────────────────
+macos/Flutter/ephemeral/
+macos/Pods/
+linux/flutter/ephemeral/
+windows/flutter/ephemeral/
+
+# ─────────────────────────────────────────────────────────────────────
+# Web 빌드 (build/web 은 이미 build/ 로 잡힘 — 추가 안전장치)
+# ─────────────────────────────────────────────────────────────────────
+build/web/
+
+# ─────────────────────────────────────────────────────────────────────
+# IDE — IntelliJ / Android Studio
+# ─────────────────────────────────────────────────────────────────────
+.idea/
+*.iml
+*.iws
+*.ipr
+.idea_modules/
+atlassian-ide-plugin.xml
+.attach_pid*
+
+# ─────────────────────────────────────────────────────────────────────
+# IDE — VSCode
+# ─────────────────────────────────────────────────────────────────────
+.vscode/
+.history/
+*.code-workspace
+
+# ─────────────────────────────────────────────────────────────────────
+# 에디터 백업
+# ─────────────────────────────────────────────────────────────────────
 *.swp
 *.swo
 *~
+.directory
 
-# macOS
+# ─────────────────────────────────────────────────────────────────────
+# OS — macOS
+# ─────────────────────────────────────────────────────────────────────
 .DS_Store
 **/.DS_Store
 ._*
+.Spotlight-V100
+.Trashes
 
-# Windows
+# ─────────────────────────────────────────────────────────────────────
+# OS — Windows
+# ─────────────────────────────────────────────────────────────────────
 Thumbs.db
 ehthumbs.db
 Desktop.ini
 $RECYCLE.BIN/
 *.lnk
 
-# Linux
-*~
+# ─────────────────────────────────────────────────────────────────────
+# OS — Linux
+# ─────────────────────────────────────────────────────────────────────
 .directory
+*~
 
-# Env / Secrets
+# ─────────────────────────────────────────────────────────────────────
+# 환경 / 비밀 — 절대 커밋 금지
+# ─────────────────────────────────────────────────────────────────────
 .env
 .env.*
 *.env.local
+
+# 인증서 / 키
 *.pem
 *.p12
 *.key
 *.cert
+*.crt
+*.jks
+*.keystore
+
+# Firebase / GCP (실수로 올리면 즉시 키 폐기 필요)
 google-services.json
 GoogleService-Info.plist
+firebase-credentials.json
+service-account*.json
 
-# AI Tools
+# 카카오 / 네이버 / 구글 맵 API 키 직접 박아둔 파일
+api_keys.dart
+secrets.dart
+**/secrets/
+
+# ─────────────────────────────────────────────────────────────────────
+# AI 코딩 도구 (팀원에게 노이즈)
+# ─────────────────────────────────────────────────────────────────────
 .claude/
 CLAUDE.md
 .cursor/
@@ -87,19 +184,38 @@ CLAUDE.md
 .amazonq/
 .ai/
 
-# Coverage / Test
+# ─────────────────────────────────────────────────────────────────────
+# 테스트 / 커버리지
+# ─────────────────────────────────────────────────────────────────────
 coverage/
 *.lcov
 test-results/
+.test_coverage.dart
 
-# Logs
+# ─────────────────────────────────────────────────────────────────────
+# 로그
+# ─────────────────────────────────────────────────────────────────────
 *.log
+*.log.*
 logs/
+log/
 crash_log.txt
 
-# Misc
+# ─────────────────────────────────────────────────────────────────────
+# 기타
+# ─────────────────────────────────────────────────────────────────────
 *.bak
 *.tmp
 *.temp
 *.orig
-.fvm/
+*.rej
+*.pid
+
+# ─────────────────────────────────────────────────────────────────────
+# 로컬 메모 / 작업 파일 (팀원마다 다른 메모)
+# ─────────────────────────────────────────────────────────────────────
+TODO.md
+NOTE.md
+notes/
+scratch/
+.scratch/
