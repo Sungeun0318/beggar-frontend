@@ -41,6 +41,17 @@ ios/Runner/GeneratedPluginRegistrant.*
 ios/Runner.xcworkspace/xcshareddata/
 ios/Runner.xcodeproj/xcuserdata/
 ios/Runner.xcodeproj/project.xcworkspace/xcuserdata/
+ios/Runner/GoogleService-Info.plist
+ios/Runner/firebase_app_id_file.json
+ios/**/*.mobileprovision
+ios/**/*.provisionprofile
+ios/ExportOptions.plist
+*.ipa
+*.xcarchive
+*.dSYM/
+*.dSYM.zip
+*.xcresult
+DerivedData/
 
 # Xcode 개인 작업 상태
 **/xcuserdata/
@@ -56,8 +67,11 @@ android/.gradle/
 android/captures/
 android/local.properties
 android/key.properties
+android/secrets.properties
 android/*.jks
 android/*.keystore
+android/**/*.jks
+android/**/*.keystore
 android/app/debug/
 android/app/profile/
 android/app/release/
@@ -72,6 +86,7 @@ android/app/src/main/jniLibs/
 *.apk
 *.aab
 *.ap_
+*.hprof
 
 # ─────────────────────────────────────────────────────────────────────
 # 데스크톱 빌드 타깃 (macOS / Linux / Windows)
@@ -155,6 +170,7 @@ $RECYCLE.BIN/
 # Firebase / GCP (실수로 올리면 즉시 키 폐기 필요)
 google-services.json
 GoogleService-Info.plist
+firebase_app_id_file.json
 firebase-credentials.json
 service-account*.json
 

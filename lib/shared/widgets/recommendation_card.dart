@@ -13,6 +13,7 @@ class RecommendationCard extends StatelessWidget {
   final String amount;
   final Color tagBg;
   final Color tagColor;
+  final VoidCallback? onMapTap;
 
   const RecommendationCard({
     super.key,
@@ -24,12 +25,13 @@ class RecommendationCard extends StatelessWidget {
     required this.amount,
     required this.tagBg,
     required this.tagColor,
+    this.onMapTap,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 156,
+      height: 188,
       padding: const EdgeInsets.all(14),
       decoration: softBox(radius: AppRadius.card),
       child: Row(
@@ -69,10 +71,24 @@ class RecommendationCard extends StatelessWidget {
                 const SizedBox(height: 7),
                 Text(
                   title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                     letterSpacing: -0.7,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  walk,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  softWrap: false,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: AppColors.lightSub,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -89,33 +105,70 @@ class RecommendationCard extends StatelessWidget {
                         border: Border.all(color: AppColors.muted),
                       ),
                       child: Text(
-                        walk,
+                        rating,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                          fontSize: 14,
-                          color: AppColors.lightSub,
+                          fontSize: 13,
+                          color: AppColors.sub,
                           fontWeight: FontWeight.w600,
                         ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      rating,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        color: AppColors.sub,
-                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 8),
-                Text(
-                  amount,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.darkSub,
-                  ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        amount,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.darkSub,
+                        ),
+                      ),
+                    ),
+                    if (onMapTap != null) ...[
+                      const SizedBox(width: 8),
+                      InkWell(
+                        onTap: onMapTap,
+                        borderRadius: BorderRadius.circular(AppRadius.chip),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 9,
+                            vertical: 5,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.accentBg,
+                            borderRadius: BorderRadius.circular(AppRadius.chip),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.map_outlined,
+                                size: 14,
+                                color: AppColors.brown,
+                              ),
+                              SizedBox(width: 3),
+                              Text(
+                                '지도',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.brown,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ],
             ),

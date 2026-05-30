@@ -246,8 +246,8 @@ JWT 액세스/리프레시 토큰 영속화. **구현 완료** (shared_preferenc
 
 ### `lib/shared/widgets/recommendation_card.dart`
 가게 추천 카드.
-- `RecommendationCard({image, tag, title, walk, rating, amount, tagBg, tagColor})`
-- 높이 148, 왼쪽 100×100 이미지 + 우측 텍스트 영역 (태그 배지, 제목, 도보시간, 별점, 금액)
+- `RecommendationCard({image, tag, title, walk, rating, amount, tagBg, tagColor, onMapTap?})`
+- 높이 188, 왼쪽 100×100 이미지 + 우측 텍스트 영역 (태그 배지, 제목, 주소/도보정보, 인증 배지, 금액, 지도 버튼)
 - 사용처: 추천 화면 3개, 진행 중 화면 1개
 
 ### `lib/shared/widgets/receipt_card.dart`
@@ -421,13 +421,14 @@ JWT 액세스/리프레시 토큰 영속화. **구현 완료** (shared_preferenc
 ### recommendation/
 
 #### `lib/features/recommendation/recommendation_screen.dart`
-**예산 맞춤 추천**. 60,000원 예산 내 가게 3곳 추천.
+**예산 맞춤 추천**. Spring 백엔드 추천 API에서 착한가격업소 후보를 받아 표시.
 - 헤더: "예산에 맞는 추천"
-- 상단 요약: SummaryRow 2개 (위치 "명학역 1번 출구 근처" + 변경 칩 / 예산 "60,000원 이내 추천")
-- 추천 카드 3개:
-  1. 한식 — 정성 한식 세트 (도보 5분, 38,000원)
-  2. 기타 요식업 — 따뜻한 하루 카페 (도보 7분, 18,000원)
-  3. 기타 요식업 — 보드게임 놀이터 (도보 9분, 24,000원)
+- 상단 요약: API 요청 지역/태그 + 총예산 기준 문구
+- 현재 1차 연결값: `roomNo=1`, `tag=식사`, `region=서울특별시 중구`
+- 추천 카드:
+  - `thumbnailUrl` 기본 이미지
+  - 업소명, 업종, 주소, 최저 가격 표시
+  - 긴 주소/가격은 말줄임 처리
 - 마스코트 안내 카드: "남는 예산까지 고려한 조합을 추천해드려요!"
 - 하단: "거지방 시작하기" 버튼 → `onDone` (진행 중 화면으로)
 - props: `onBack`, `onDone`

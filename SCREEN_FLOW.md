@@ -249,7 +249,9 @@ ActiveRoom
 파일: `lib/features/recommendation/recommendation_screen.dart`
 
 역할:
-- 위치와 총예산 기준으로 추천 장소 목록 확인.
+- 백엔드 추천 API에서 받은 착한가격업소 기반 추천 장소 목록 확인.
+- 현재 1차 연결값은 `roomNo=1`, `tag=식사`, `region=서울특별시 중구` 고정이다.
+- 추천 카드는 업소명, 업종, 주소, 최저 가격, 카테고리 기본 이미지, 카카오맵 지도 버튼을 표시한다.
 - 거지방 내부 화면으로 진입.
 
 버튼/동작:
@@ -258,7 +260,7 @@ ActiveRoom
 |---|---|
 | 뒤로가기 | `BudgetResultScreen`으로 이동 |
 | 위치 변경 | 미연결 |
-| 추천 카드 | 미연결 |
+| 추천 카드 지도 버튼 | `url_launcher`로 백엔드 응답의 `mapUrl`을 외부 앱/브라우저에서 열기 |
 | 안내 카드 화살표 | 미연결 |
 | 거지방 시작하기 | `ActiveRoomScreen`으로 이동 |
 
