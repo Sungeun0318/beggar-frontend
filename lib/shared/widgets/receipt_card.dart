@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:beggar_app/core/theme/app_colors.dart';
+import 'package:beggar_app/core/theme/app_radius.dart';
 import 'package:beggar_app/core/utils/decorations.dart';
 import 'package:beggar_app/shared/widgets/chip_label.dart';
 
@@ -23,9 +24,9 @@ class ReceiptCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 138,
+      height: 146,
       padding: const EdgeInsets.all(17),
-      decoration: softBox(radius: 20),
+      decoration: softBox(radius: AppRadius.card),
       child: Column(
         children: [
           Row(
@@ -48,7 +49,7 @@ class ReceiptCard extends StatelessWidget {
           Row(
             children: [
               ClipRRect(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(AppRadius.compact),
                 child: Image.asset(
                   image,
                   width: 54,

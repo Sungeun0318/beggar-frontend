@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:beggar_app/core/theme/app_colors.dart';
+import 'package:beggar_app/core/theme/app_radius.dart';
 
 class PrimaryButton extends StatelessWidget {
   final String label;
@@ -23,7 +24,7 @@ class PrimaryButton extends StatelessWidget {
         decoration: BoxDecoration(
           gradient: enabled ? AppColors.goldGradient : null,
           color: enabled ? null : AppColors.border,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(AppRadius.card),
           boxShadow: enabled
               ? const [
                   BoxShadow(

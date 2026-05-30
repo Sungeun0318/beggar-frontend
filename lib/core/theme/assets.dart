@@ -1,6 +1,7 @@
 class Assets {
   static const logo = 'assets/images/figma/logo.png';
   static const receiptFood = 'assets/images/figma/receipt_food.png';
+  static const receiptUpload = 'assets/images/figma/receipt_upload.png';
   static const receiptCafe = 'assets/images/figma/receipt_cafe.png';
   static const receiptBrunch = 'assets/images/figma/receipt_brunch.png';
   static const mascotCelebration = 'assets/images/figma/mascot_celebration.png';

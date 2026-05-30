@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:beggar_app/core/theme/app_colors.dart';
+import 'package:beggar_app/core/theme/app_radius.dart';
 import 'package:beggar_app/core/utils/decorations.dart';
 
 class RecommendationCard extends StatelessWidget {
@@ -28,13 +29,13 @@ class RecommendationCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 148,
+      height: 156,
       padding: const EdgeInsets.all(14),
-      decoration: softBox(radius: 20),
+      decoration: softBox(radius: AppRadius.card),
       child: Row(
         children: [
           ClipRRect(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(AppRadius.compact),
             child: Image.asset(
               image,
               width: 100,
@@ -54,7 +55,7 @@ class RecommendationCard extends StatelessWidget {
                   ),
                   decoration: BoxDecoration(
                     color: tagBg,
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(AppRadius.chip),
                   ),
                   child: Text(
                     tag,
@@ -84,7 +85,7 @@ class RecommendationCard extends StatelessWidget {
                       ),
                       decoration: BoxDecoration(
                         color: AppColors.bg,
-                        borderRadius: BorderRadius.circular(14),
+                        borderRadius: BorderRadius.circular(AppRadius.chip),
                         border: Border.all(color: AppColors.muted),
                       ),
                       child: Text(
@@ -113,7 +114,7 @@ class RecommendationCard extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF5A4F43),
+                    color: AppColors.darkSub,
                   ),
                 ),
               ],

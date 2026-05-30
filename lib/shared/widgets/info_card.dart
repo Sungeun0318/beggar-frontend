@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:beggar_app/core/theme/app_colors.dart';
+import 'package:beggar_app/core/theme/app_radius.dart';
 import 'package:beggar_app/core/utils/decorations.dart';
 
 class InfoCard extends StatelessWidget {
@@ -20,7 +21,7 @@ class InfoCard extends StatelessWidget {
     return Container(
       height: body == null ? 67 : 107,
       padding: const EdgeInsets.symmetric(horizontal: 20),
-      decoration: softBox(color: AppColors.accentBg, radius: 16),
+      decoration: softBox(color: AppColors.accentBg, radius: AppRadius.compact),
       child: Row(
         children: [
           CircleAvatar(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:beggar_app/core/theme/app_colors.dart';
+import 'package:beggar_app/core/theme/app_radius.dart';
 import 'package:beggar_app/core/utils/decorations.dart';
 
 class ChoiceBox extends StatelessWidget {
@@ -12,7 +13,7 @@ class ChoiceBox extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: softBox(radius: 16),
+      decoration: softBox(radius: AppRadius.compact),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [

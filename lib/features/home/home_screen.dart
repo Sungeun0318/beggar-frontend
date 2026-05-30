@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 
 import 'package:beggar_app/core/theme/app_colors.dart';
-import 'package:beggar_app/core/theme/assets.dart';
+import 'package:beggar_app/core/theme/app_radius.dart';
+import 'package:beggar_app/core/theme/app_spacing.dart';
 import 'package:beggar_app/core/utils/decorations.dart';
 import 'package:beggar_app/data/mock/mock_db.dart';
+import 'package:beggar_app/shared/widgets/app_header.dart';
 import 'package:beggar_app/shared/widgets/figma_frame.dart';
 import 'package:beggar_app/shared/widgets/room_home_card.dart';
 
@@ -22,53 +24,16 @@ class HomeScreen extends StatelessWidget {
     return FigmaFrame(
       child: Stack(
         children: [
+          const AppHeader.brand(title: '거지방', showNotification: true),
           Positioned(
-            top: 48,
-            left: 24,
-            right: 24,
-            height: 48,
-            child: Row(
-              children: [
-                ClipOval(
-                  child: Image.asset(
-                    Assets.logo,
-                    width: 36,
-                    height: 36,
-                    fit: BoxFit.cover,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                const Text(
-                  '거지 우정 수호대',
-                  style: TextStyle(
-                    fontSize: 19,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -0.7,
-                  ),
-                ),
-                const Spacer(),
-                const Icon(Icons.notifications_none, size: 24),
-              ],
-            ),
-          ),
-          Positioned(
-            top: 116,
+            top: AppSpacing.contentTop,
             left: 24,
             right: 24,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  '내 거지방',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: -0.7,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  '참여 중인 방에서 예산과 지출을 확인해요.',
+                  '친구들과 만든 거지방에서 예산과 지출을 확인해요.',
                   style: TextStyle(
                     fontSize: 14,
                     color: AppColors.sub,
@@ -79,7 +44,7 @@ class HomeScreen extends StatelessWidget {
                 Container(
                   height: 54,
                   padding: const EdgeInsets.symmetric(horizontal: 20),
-                  decoration: softBox(radius: 16),
+                  decoration: softBox(radius: AppRadius.compact),
                   child: const Row(
                     children: [
                       Icon(
@@ -125,7 +90,10 @@ class HomeScreen extends StatelessWidget {
                   onTap: onCreate,
                   child: Container(
                     height: 92,
-                    decoration: softBox(color: AppColors.accentBg, radius: 20),
+                    decoration: softBox(
+                      color: AppColors.accentBg,
+                      radius: AppRadius.card,
+                    ),
                     child: const Center(
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -136,7 +104,7 @@ class HomeScreen extends StatelessWidget {
                           ),
                           SizedBox(width: 8),
                           Text(
-                            '새 거지방 만들기',
+                            '새 친구방 만들기',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w800,
@@ -148,6 +116,7 @@ class HomeScreen extends StatelessWidget {
                     ),
                   ),
                 ),
+                const SizedBox(height: AppSpacing.bottomSafe),
               ],
             ),
           ),
