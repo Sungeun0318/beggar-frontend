@@ -336,6 +336,102 @@ class _RecommendationContent extends StatelessWidget {
   }
 
   Future<void> _openMap(BuildContext context, String mapUrl) async {
+    final shouldOpen = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: softBox(radius: AppRadius.card),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text(
+                '카카오맵으로 이동할까요?',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.5,
+                  color: AppColors.text,
+                ),
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                '선택한 가게를 카카오맵에서 확인할 수 있어요.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 14,
+                  height: 1.45,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.sub,
+                ),
+              ),
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  Expanded(
+                    child: InkWell(
+                      onTap: () => Navigator.of(dialogContext).pop(false),
+                      borderRadius: BorderRadius.circular(AppRadius.compact),
+                      child: Container(
+                        height: 46,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: AppColors.bg,
+                          borderRadius: BorderRadius.circular(
+                            AppRadius.compact,
+                          ),
+                          border: Border.all(color: AppColors.muted),
+                        ),
+                        child: const Text(
+                          '취소',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.sub,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: InkWell(
+                      onTap: () => Navigator.of(dialogContext).pop(true),
+                      borderRadius: BorderRadius.circular(AppRadius.compact),
+                      child: Container(
+                        height: 46,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: AppColors.accent,
+                          borderRadius: BorderRadius.circular(
+                            AppRadius.compact,
+                          ),
+                        ),
+                        child: const Text(
+                          '확인',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (shouldOpen != true || !context.mounted) return;
+
     final uri = Uri.tryParse(mapUrl);
     final opened = uri != null
         ? await launchUrl(uri, mode: LaunchMode.externalApplication)
@@ -370,7 +466,7 @@ class _ApiRecommendationCard extends StatelessWidget {
           : place.menuName!,
       amount: place.expectedPrice == null
           ? '가격 정보 없음'
-          : '최저 ${money(place.expectedPrice!)}원',
+          : '${money(place.expectedPrice!)}원',
       tagBg: tagBg,
       tagColor: tagColor,
       onMapTap: onMapTap,
@@ -808,7 +904,7 @@ class _EmptyRecommendation extends StatelessWidget {
       padding: const EdgeInsets.all(18),
       decoration: softBox(radius: AppRadius.card),
       child: const Text(
-        '조건에 맞는 착한가격업소가 없어요.',
+        '조건에 맞는 추천이 부족해서 범위를 넓혀봤어요.',
         textAlign: TextAlign.center,
         style: TextStyle(
           fontSize: 14,

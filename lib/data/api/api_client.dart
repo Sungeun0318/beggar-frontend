@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:beggar_app/core/config/api_config.dart';
-import 'package:flutter/foundation.dart';
 
 class ApiClient {
   ApiClient({String? baseUrl}) : baseUrl = baseUrl ?? ApiConfig.baseUrl;
@@ -16,15 +15,11 @@ class ApiClient {
     final uri = _uri(path, query);
     final client = HttpClient()..connectionTimeout = ApiConfig.connectTimeout;
     try {
-      debugPrint('GET $uri');
       final request = await client.getUrl(uri);
       request.headers.set(HttpHeaders.acceptHeader, 'application/json');
       request.headers.set(HttpHeaders.connectionHeader, 'close');
       final response = await request.close().timeout(ApiConfig.receiveTimeout);
       return _decode(response);
-    } catch (error, stackTrace) {
-      debugPrint('GET failed $uri\n$error\n$stackTrace');
-      rethrow;
     } finally {
       client.close(force: true);
     }
@@ -37,15 +32,11 @@ class ApiClient {
     final uri = _uri(path, query);
     final client = HttpClient()..connectionTimeout = ApiConfig.connectTimeout;
     try {
-      debugPrint('GET $uri');
       final request = await client.getUrl(uri);
       request.headers.set(HttpHeaders.acceptHeader, 'application/json');
       request.headers.set(HttpHeaders.connectionHeader, 'close');
       final response = await request.close().timeout(ApiConfig.receiveTimeout);
       return _decodeList(response);
-    } catch (error, stackTrace) {
-      debugPrint('GET failed $uri\n$error\n$stackTrace');
-      rethrow;
     } finally {
       client.close(force: true);
     }
@@ -73,11 +64,9 @@ class ApiClient {
     final raw = await utf8.decodeStream(response);
     final decoded = jsonDecode(raw) as Map<String, dynamic>;
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      debugPrint('GET status ${response.statusCode}: $raw');
       final message = decoded['message'] as String? ?? 'API 요청에 실패했어요.';
       throw ApiException(response.statusCode, message);
     }
-    debugPrint('GET status ${response.statusCode}: ${raw.length} bytes');
     return decoded;
   }
 
@@ -85,13 +74,11 @@ class ApiClient {
     final raw = await utf8.decodeStream(response);
     final decoded = jsonDecode(raw);
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      debugPrint('GET status ${response.statusCode}: $raw');
       final message = decoded is Map<String, dynamic>
           ? decoded['message'] as String? ?? 'API 요청에 실패했어요.'
           : 'API 요청에 실패했어요.';
       throw ApiException(response.statusCode, message);
     }
-    debugPrint('GET status ${response.statusCode}: ${raw.length} bytes');
     return decoded as List<dynamic>;
   }
 }
