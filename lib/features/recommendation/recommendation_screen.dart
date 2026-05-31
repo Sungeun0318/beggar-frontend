@@ -16,11 +16,19 @@ import 'package:beggar_app/shared/widgets/summary_row.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class RecommendationScreen extends StatefulWidget {
+  final int roomNo;
+  final String initialTag;
+  final String region;
+  final List<String> tags;
   final VoidCallback onBack;
   final VoidCallback onDone;
 
   const RecommendationScreen({
     super.key,
+    required this.roomNo,
+    required this.initialTag,
+    required this.region,
+    required this.tags,
     required this.onBack,
     required this.onDone,
   });
@@ -30,20 +38,43 @@ class RecommendationScreen extends StatefulWidget {
 }
 
 class _RecommendationScreenState extends State<RecommendationScreen> {
-  static const _roomNo = 1;
-  static const _tag = '식사';
-  static const _region = '서울특별시 중구';
-
-  late final Future<RecommendationResult> _recommendationFuture;
+  late Future<RecommendationResult> _recommendationFuture;
+  late String _selectedTag;
 
   @override
   void initState() {
     super.initState();
-    _recommendationFuture = RecommendationRepository().recommend(
-      roomNo: _roomNo,
-      tag: _tag,
-      region: _region,
+    _selectedTag = widget.initialTag;
+    _recommendationFuture = _loadRecommendation();
+  }
+
+  Future<RecommendationResult> _loadRecommendation() {
+    return RecommendationRepository().recommend(
+      roomNo: widget.roomNo,
+      tag: _selectedTag,
+      region: widget.region,
     );
+  }
+
+  void _selectTag(String tag) {
+    if (_selectedTag == tag) {
+      return;
+    }
+    setState(() {
+      _selectedTag = tag;
+      _recommendationFuture = _loadRecommendation();
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant RecommendationScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.roomNo != widget.roomNo ||
+        oldWidget.region != widget.region ||
+        oldWidget.initialTag != widget.initialTag) {
+      _selectedTag = widget.initialTag;
+      _recommendationFuture = _loadRecommendation();
+    }
   }
 
   @override
@@ -71,6 +102,9 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
                 final result = snapshot.data!;
                 return _RecommendationContent(
                   result: result,
+                  tags: widget.tags,
+                  selectedTag: _selectedTag,
+                  onTagSelected: _selectTag,
                   onDone: widget.onDone,
                 );
               },
@@ -84,15 +118,24 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
 
 class _RecommendationContent extends StatelessWidget {
   final RecommendationResult result;
+  final List<String> tags;
+  final String selectedTag;
+  final ValueChanged<String> onTagSelected;
   final VoidCallback onDone;
 
-  const _RecommendationContent({required this.result, required this.onDone});
+  const _RecommendationContent({
+    required this.result,
+    required this.tags,
+    required this.selectedTag,
+    required this.onTagSelected,
+    required this.onDone,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final budgetLabel = result.totalBudget == null
-        ? '예산 정보 없이 추천'
-        : '총예산 ${money(result.totalBudget!)}원 기준 추천';
+    final budgetLabel = result.recommendationBudget == null
+        ? (result.totalBudget == null ? '예산 정보 없이 추천' : '남은 예산 기준 추천')
+        : '1인 추천 예산 ${money(result.recommendationBudget!)}원';
 
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.pageH),
@@ -111,6 +154,16 @@ class _RecommendationContent extends StatelessWidget {
             label: budgetLabel,
             bg: const Color(0xFFF4F6FF),
           ),
+          const SizedBox(height: 16),
+          _TagSelector(
+            tags: tags,
+            selectedTag: selectedTag,
+            onSelected: onTagSelected,
+          ),
+          if (result.budgetGuide != null) ...[
+            const SizedBox(height: 14),
+            _BudgetGuide(message: result.budgetGuide!),
+          ],
           const SizedBox(height: 22),
           if (result.places.isEmpty)
             const _EmptyRecommendation()
@@ -175,6 +228,110 @@ class _ApiRecommendationCard extends StatelessWidget {
       return (AppColors.tagBgCafe, AppColors.tagFgCafe);
     }
     return (AppColors.tagBgFood, AppColors.danger);
+  }
+}
+
+class _TagSelector extends StatelessWidget {
+  final List<String> tags;
+  final String selectedTag;
+  final ValueChanged<String> onSelected;
+
+  const _TagSelector({
+    required this.tags,
+    required this.selectedTag,
+    required this.onSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (final tag in tags)
+          _TagButton(
+            label: tag,
+            selected: tag == selectedTag,
+            onTap: () => onSelected(tag),
+          ),
+      ],
+    );
+  }
+}
+
+class _TagButton extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _TagButton({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppRadius.chip),
+      child: Container(
+        height: 38,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.accentBg : Colors.white,
+          borderRadius: BorderRadius.circular(AppRadius.chip),
+          border: Border.all(
+            color: selected ? AppColors.accent : AppColors.border,
+          ),
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: selected ? AppColors.text : AppColors.sub,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _BudgetGuide extends StatelessWidget {
+  final String message;
+
+  const _BudgetGuide({required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: softBox(color: AppColors.bg, radius: AppRadius.compact),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            Icons.account_balance_wallet_outlined,
+            size: 18,
+            color: AppColors.brown,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message,
+              style: const TextStyle(
+                fontSize: 13,
+                height: 1.45,
+                fontWeight: FontWeight.w600,
+                color: AppColors.darkSub,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

@@ -48,7 +48,7 @@ lib/
 | 영수증 등록 | `receipts/receipt_register_screen.dart` | 카메라/갤러리/수동 입력 TODO |
 | 예산 입력 | `budget/budget_input_screen.dart` | BudgetRepository.submit TODO |
 | 예산 결과 | `budget/budget_result_screen.dart` | BudgetRepository.result TODO |
-| 추천 | `recommendation/recommendation_screen.dart` | Python AI 서버 연동 TODO |
+| 추천 | `recommendation/recommendation_screen.dart` | Spring 추천 API 1차 연결 완료 |
 | 커뮤니티 | `community/community_screen.dart` | CommunityRepository TODO |
 | 지출 내역 | `receipts/receipts_screen.dart` | 마이 화면 내부 진입, ReceiptRepository.listAll TODO |
 | (기타 탭 placeholder) | `placeholders/placeholder_tab_screen.dart` | 사실상 사용 안 함 |
@@ -423,8 +423,10 @@ JWT 액세스/리프레시 토큰 영속화. **구현 완료** (shared_preferenc
 #### `lib/features/recommendation/recommendation_screen.dart`
 **예산 맞춤 추천**. Spring 백엔드 추천 API에서 착한가격업소 후보를 받아 표시.
 - 헤더: "예산에 맞는 추천"
-- 상단 요약: API 요청 지역/태그 + 총예산 기준 문구
-- 현재 1차 연결값: `roomNo=1`, `tag=식사`, `region=서울특별시 중구`
+- 입력값: `roomNo`, `initialTag`, `region`, `tags`
+- 상단 요약: API 요청 지역/태그 + 1인 추천 예산 문구
+- 태그 선택 시 `GET /rooms/{roomNo}/recommend?tag={tag}&region={region}` 재호출
+- 응답의 `recommendationBudget`, `budgetGuide`, `fallbackApplied`를 안내 문구로 표시
 - 추천 카드:
   - `thumbnailUrl` 기본 이미지
   - 업소명, 업종, 주소, 최저 가격 표시
@@ -538,7 +540,7 @@ JWT 액세스/리프레시 토큰 영속화. **구현 완료** (shared_preferenc
 | Invite | `POST /rooms/join` (입장) / `GET /rooms/{no}/members` (폴링) | RoomRepository | room_members |
 | BudgetInput | `POST /rooms/{no}/budget` | BudgetRepository | budgets |
 | BudgetResult | `POST /rooms/{no}/budget/confirm` / `GET /rooms/{no}/budget/result` | BudgetRepository | room_budget_results |
-| Recommendation | `GET /rooms/{no}/recommend` (Spring → Python 중계, DB 미적재) | RecommendationRepository (신규) | (없음 — 호출 시점 사용) |
+| Recommendation | `GET /rooms/{no}/recommend?tag={tag}&region={region}` (Spring이 착한가격업소 OpenAPI 직접 호출, DB 미적재) | RecommendationRepository | (없음 — 호출 시점 사용) |
 | ActiveRoom | `GET /rooms/{no}` + `GET /rooms/{no}/receipts` + `GET /rooms/{no}/beggar-score` | RoomRepository, ReceiptRepository, RoomBeggarScoreRepository (신규) | rooms, receipts, room_beggar_scores |
 | RoomSettings | `PATCH /rooms/{no}` 또는 `PATCH /rooms/{no}/settings` | RoomRepository | rooms, room_purpose_tags |
 | ReceiptRegister | `POST /rooms/{no}/receipts` | ReceiptRepository | receipts, receipt_splits |

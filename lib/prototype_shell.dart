@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:beggar_app/core/theme/app_colors.dart';
+import 'package:beggar_app/data/mock/mock_db.dart';
 import 'package:beggar_app/features/auth/login_screen.dart';
 import 'package:beggar_app/features/auth/my_page_screen.dart';
 import 'package:beggar_app/features/auth/signup_screen.dart';
@@ -159,7 +160,12 @@ class _PrototypeShellState extends State<PrototypeShell> {
           onNext: () => _go(PrototypePage.recommendation),
         );
       case PrototypePage.recommendation:
+        final room = MockDb.room;
         child = RecommendationScreen(
+          roomNo: room.no,
+          initialTag: room.tags.first,
+          region: room.location,
+          tags: room.tags,
           onBack: () => _go(PrototypePage.budgetResult),
           onDone: () => _go(PrototypePage.activeRoom),
         );

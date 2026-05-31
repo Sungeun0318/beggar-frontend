@@ -3,6 +3,9 @@ class RecommendationResult {
   final int? totalBudget;
   final int spentAmount;
   final int? remainingBudget;
+  final int? recommendationBudget;
+  final String? budgetGuide;
+  final bool fallbackApplied;
   final String? requestedTag;
   final String? requestedRegion;
   final List<RecommendedPlace> places;
@@ -12,6 +15,9 @@ class RecommendationResult {
     required this.totalBudget,
     required this.spentAmount,
     required this.remainingBudget,
+    required this.recommendationBudget,
+    required this.budgetGuide,
+    required this.fallbackApplied,
     required this.requestedTag,
     required this.requestedRegion,
     required this.places,
@@ -23,6 +29,9 @@ class RecommendationResult {
       totalBudget: json['totalBudget'] as int?,
       spentAmount: json['spentAmount'] as int,
       remainingBudget: json['remainingBudget'] as int?,
+      recommendationBudget: json['recommendationBudget'] as int?,
+      budgetGuide: json['budgetGuide'] as String?,
+      fallbackApplied: json['fallbackApplied'] as bool? ?? false,
       requestedTag: json['requestedTag'] as String?,
       requestedRegion: json['requestedRegion'] as String?,
       places: (json['places'] as List<dynamic>? ?? [])
