@@ -304,12 +304,14 @@ class _RecommendationContent extends StatelessWidget {
             label: budgetLabel,
             bg: const Color(0xFFF4F6FF),
           ),
-          const SizedBox(height: 16),
-          _TagSelector(
-            tags: tags,
-            selectedTag: selectedTag,
-            onSelected: onTagSelected,
-          ),
+          if (tags.length > 1) ...[
+            const SizedBox(height: 16),
+            _TagSelector(
+              tags: tags,
+              selectedTag: selectedTag,
+              onSelected: onTagSelected,
+            ),
+          ],
           if (result.budgetGuide != null) ...[
             const SizedBox(height: 14),
             _BudgetGuide(message: result.budgetGuide!),

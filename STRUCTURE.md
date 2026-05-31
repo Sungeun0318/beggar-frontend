@@ -247,8 +247,9 @@ JWT 액세스/리프레시 토큰 영속화. **구현 완료** (shared_preferenc
 ### `lib/shared/widgets/recommendation_card.dart`
 가게 추천 카드.
 - `RecommendationCard({image, tag, title, walk, rating, amount, tagBg, tagColor, onMapTap?})`
-- 높이 188, 왼쪽 100×100 이미지 + 우측 텍스트 영역 (태그 배지, 업소명, 대표 메뉴명, 가격, 주소/도보정보, 지도 버튼)
-- 우상단 대각선 `착한가격업소` 배지를 포함한다.
+- 높이 146, 왼쪽 94×94 이미지 + 우측 텍스트 영역 (태그 배지, 업소명, 대표 메뉴명, 가격, 주소/도보정보)
+- 우상단 카드 내부 `착한가격업소` 띠를 포함한다.
+- 카드 전체 클릭 시 `onMapTap`을 호출한다.
 - 사용처: 추천 화면
 
 ### `lib/shared/widgets/receipt_card.dart`
@@ -427,12 +428,14 @@ JWT 액세스/리프레시 토큰 영속화. **구현 완료** (shared_preferenc
 - 입력값: `roomNo`, `initialTag`, `region`, `tags`
 - 상단 요약: 선택 지역/현재 위치 + 1인 추천 예산 문구
 - 위치 변경: 카카오 로컬 검색 결과 또는 현재 위치 좌표를 선택해 추천 API를 재호출
+- 태그는 반장이 선택한 방 태그만 표시한다. 태그가 1개면 칩 영역을 숨기고, 여러 개면 선택된 태그들만 칩으로 보여준다.
 - 태그 선택 시 `GET /rooms/{roomNo}/recommend?tag={tag}&region={region}&lat={lat}&lng={lng}&radius={radius}` 재호출
 - 응답의 `recommendationBudget`, `budgetGuide`, `fallbackApplied`를 안내 문구로 표시
 - 추천 카드:
   - `thumbnailUrl` 기본 이미지
   - 업소명, 업종, 대표 메뉴명(`menuName`), 가격(`expectedPrice`), 주소 표시
-  - 우상단 대각선 착한가격업소 배지 표시
+  - 우상단 카드 내부 착한가격업소 띠 표시
+  - 카드 전체 클릭 시 카카오맵 이동 확인창 표시 후 `mapUrl` 열기
   - 긴 주소/가격은 말줄임 처리
 - 마스코트 안내 카드: "남는 예산까지 고려한 조합을 추천해드려요!"
 - 하단: "거지방 시작하기" 버튼 → `onDone` (진행 중 화면으로)

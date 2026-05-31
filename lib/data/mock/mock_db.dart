@@ -18,7 +18,7 @@ class MockDb {
     name: '명학역 데이트',
     code: 'abc001',
     location: '경기 안양시 만안구',
-    tags: ['한식', '양식', '기타 요식업'],
+    tags: ['한식'],
     memberCount: 4,
     maxMemberCount: 8,
   );
