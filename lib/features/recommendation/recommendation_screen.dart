@@ -6,13 +6,16 @@ import 'package:beggar_app/core/theme/app_spacing.dart';
 import 'package:beggar_app/core/theme/assets.dart';
 import 'package:beggar_app/core/utils/decorations.dart';
 import 'package:beggar_app/core/utils/formatters.dart';
+import 'package:beggar_app/data/models/location_search_result.dart';
 import 'package:beggar_app/data/models/recommendation.dart';
+import 'package:beggar_app/data/repositories/location_repository.dart';
 import 'package:beggar_app/data/repositories/recommendation_repository.dart';
 import 'package:beggar_app/shared/widgets/app_header.dart';
 import 'package:beggar_app/shared/widgets/figma_frame.dart';
 import 'package:beggar_app/shared/widgets/primary_button.dart';
 import 'package:beggar_app/shared/widgets/recommendation_card.dart';
 import 'package:beggar_app/shared/widgets/summary_row.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class RecommendationScreen extends StatefulWidget {
@@ -38,21 +41,35 @@ class RecommendationScreen extends StatefulWidget {
 }
 
 class _RecommendationScreenState extends State<RecommendationScreen> {
+  static const int _nearbyRadius = 5000;
+
+  final RecommendationRepository _recommendationRepository =
+      RecommendationRepository();
   late Future<RecommendationResult> _recommendationFuture;
   late String _selectedTag;
+  late String _selectedRegion;
+  String? _selectedRegionQuery;
+  double? _selectedLat;
+  double? _selectedLng;
 
   @override
   void initState() {
     super.initState();
     _selectedTag = widget.initialTag;
+    _selectedRegion = widget.region;
     _recommendationFuture = _loadRecommendation();
   }
 
   Future<RecommendationResult> _loadRecommendation() {
-    return RecommendationRepository().recommend(
+    return _recommendationRepository.recommend(
       roomNo: widget.roomNo,
       tag: _selectedTag,
-      region: widget.region,
+      region:
+          _selectedRegionQuery ??
+          (_selectedLat == null ? _selectedRegion : null),
+      lat: _selectedLat,
+      lng: _selectedLng,
+      radius: _selectedLat == null ? null : _nearbyRadius,
     );
   }
 
@@ -66,6 +83,117 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
     });
   }
 
+  void _selectLocation(LocationSearchResult location) {
+    setState(() {
+      _selectedRegion = location.name.isEmpty
+          ? location.address
+          : location.name;
+      _selectedRegionQuery = _regionQuery(location.address);
+      _selectedLat = location.lat;
+      _selectedLng = location.lng;
+      _recommendationFuture = _loadRecommendation();
+    });
+  }
+
+  void _selectManualRegion(String region) {
+    final trimmed = region.trim();
+    if (trimmed.isEmpty) {
+      return;
+    }
+    setState(() {
+      _selectedRegion = trimmed;
+      _selectedRegionQuery = trimmed;
+      _selectedLat = null;
+      _selectedLng = null;
+      _recommendationFuture = _loadRecommendation();
+    });
+  }
+
+  Future<void> _useCurrentLocation() async {
+    final enabled = await Geolocator.isLocationServiceEnabled();
+    if (!enabled) {
+      _showSnack('기기 위치 서비스가 꺼져 있어.');
+      return;
+    }
+
+    var permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+
+    if (permission == LocationPermission.denied) {
+      _showSnack('위치 권한을 허용해야 현재 위치 추천을 쓸 수 있어.');
+      return;
+    }
+    if (permission == LocationPermission.deniedForever) {
+      _showSnack('설정에서 위치 권한을 허용해줘.');
+      return;
+    }
+
+    try {
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+        ),
+      );
+      debugPrint(
+        'Current position lat=${position.latitude}, lng=${position.longitude}',
+      );
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _selectedRegion = '현재 위치';
+        _selectedRegionQuery = null;
+        _selectedLat = position.latitude;
+        _selectedLng = position.longitude;
+        _recommendationFuture = _loadRecommendation();
+      });
+    } catch (error, stackTrace) {
+      debugPrint('Current location failed\n$error\n$stackTrace');
+      _showSnack('현재 위치를 가져오지 못했어.');
+    }
+  }
+
+  void _showSnack(String message) {
+    if (!mounted) {
+      return;
+    }
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Future<void> _openLocationSheet() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppRadius.card),
+        ),
+      ),
+      builder: (context) {
+        return _LocationSheet(
+          selectedRegion: _selectedRegion,
+          onCurrentLocation: () async {
+            Navigator.of(context).pop();
+            await _useCurrentLocation();
+          },
+          onLocationSelected: (location) {
+            Navigator.of(context).pop();
+            _selectLocation(location);
+          },
+          onManualRegion: (region) {
+            Navigator.of(context).pop();
+            _selectManualRegion(region);
+          },
+        );
+      },
+    );
+  }
+
   @override
   void didUpdateWidget(covariant RecommendationScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -73,6 +201,10 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
         oldWidget.region != widget.region ||
         oldWidget.initialTag != widget.initialTag) {
       _selectedTag = widget.initialTag;
+      _selectedRegion = widget.region;
+      _selectedRegionQuery = null;
+      _selectedLat = null;
+      _selectedLng = null;
       _recommendationFuture = _loadRecommendation();
     }
   }
@@ -102,9 +234,11 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
                 final result = snapshot.data!;
                 return _RecommendationContent(
                   result: result,
+                  selectedRegion: _selectedRegion,
                   tags: widget.tags,
                   selectedTag: _selectedTag,
                   onTagSelected: _selectTag,
+                  onLocationTap: _openLocationSheet,
                   onDone: widget.onDone,
                 );
               },
@@ -114,20 +248,32 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
       ),
     );
   }
+
+  String _regionQuery(String address) {
+    final parts = address.trim().split(RegExp(r'\s+'));
+    if (parts.length >= 3) {
+      return parts.take(3).join(' ');
+    }
+    return address.trim();
+  }
 }
 
 class _RecommendationContent extends StatelessWidget {
   final RecommendationResult result;
+  final String selectedRegion;
   final List<String> tags;
   final String selectedTag;
   final ValueChanged<String> onTagSelected;
+  final VoidCallback onLocationTap;
   final VoidCallback onDone;
 
   const _RecommendationContent({
     required this.result,
+    required this.selectedRegion,
     required this.tags,
     required this.selectedTag,
     required this.onTagSelected,
+    required this.onLocationTap,
     required this.onDone,
   });
 
@@ -142,11 +288,15 @@ class _RecommendationContent extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          SummaryRow(
-            icon: Icons.location_on_outlined,
-            label: result.requestedRegion ?? '지역 전체',
-            trailing: result.requestedTag,
-            bg: AppColors.accentBg,
+          InkWell(
+            onTap: onLocationTap,
+            borderRadius: BorderRadius.circular(AppRadius.card),
+            child: SummaryRow(
+              icon: Icons.location_on_outlined,
+              label: selectedRegion.isEmpty ? '지역 전체' : selectedRegion,
+              trailing: '변경',
+              bg: AppColors.accentBg,
+            ),
           ),
           const SizedBox(height: 10),
           SummaryRow(
@@ -212,8 +362,12 @@ class _ApiRecommendationCard extends StatelessWidget {
       image: place.thumbnailUrl,
       tag: place.category,
       title: place.name,
-      walk: place.address,
-      rating: '착한가격업소',
+      walk: place.walkTime == null
+          ? place.address
+          : '${place.walkTime} · ${place.address}',
+      rating: place.menuName == null || place.menuName!.isEmpty
+          ? '대표 메뉴'
+          : place.menuName!,
       amount: place.expectedPrice == null
           ? '가격 정보 없음'
           : '최저 ${money(place.expectedPrice!)}원',
@@ -228,6 +382,237 @@ class _ApiRecommendationCard extends StatelessWidget {
       return (AppColors.tagBgCafe, AppColors.tagFgCafe);
     }
     return (AppColors.tagBgFood, AppColors.danger);
+  }
+}
+
+class _LocationSheet extends StatefulWidget {
+  final String selectedRegion;
+  final Future<void> Function() onCurrentLocation;
+  final ValueChanged<LocationSearchResult> onLocationSelected;
+  final ValueChanged<String> onManualRegion;
+
+  const _LocationSheet({
+    required this.selectedRegion,
+    required this.onCurrentLocation,
+    required this.onLocationSelected,
+    required this.onManualRegion,
+  });
+
+  @override
+  State<_LocationSheet> createState() => _LocationSheetState();
+}
+
+class _LocationSheetState extends State<_LocationSheet> {
+  final LocationRepository _locationRepository = LocationRepository();
+  final TextEditingController _controller = TextEditingController();
+  Future<List<LocationSearchResult>>? _searchFuture;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _search() {
+    final query = _controller.text.trim();
+    if (query.isEmpty) {
+      return;
+    }
+    setState(() {
+      _searchFuture = _locationRepository.search(query);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(
+        left: AppSpacing.pageH,
+        right: AppSpacing.pageH,
+        top: 22,
+        bottom: MediaQuery.viewInsetsOf(context).bottom + 24,
+      ),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    '추천 지역',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.text,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: const Icon(Icons.close, color: AppColors.sub),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              widget.selectedRegion,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.sub,
+              ),
+            ),
+            const SizedBox(height: 14),
+            OutlinedButton.icon(
+              onPressed: widget.onCurrentLocation,
+              icon: const Icon(Icons.my_location, size: 18),
+              label: const Text('현재 위치 사용'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.text,
+                side: const BorderSide(color: AppColors.border),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.compact),
+                ),
+                minimumSize: const Size.fromHeight(48),
+              ),
+            ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _controller,
+                    textInputAction: TextInputAction.search,
+                    onSubmitted: (_) => _search(),
+                    decoration: InputDecoration(
+                      hintText: '동네, 역, 건물명 검색',
+                      filled: true,
+                      fillColor: AppColors.bg,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 14,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppRadius.compact),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                IconButton.filled(
+                  onPressed: _search,
+                  icon: const Icon(Icons.search),
+                  style: IconButton.styleFrom(
+                    backgroundColor: AppColors.accent,
+                    foregroundColor: Colors.white,
+                    fixedSize: const Size(48, 48),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            if (_searchFuture != null)
+              FutureBuilder<List<LocationSearchResult>>(
+                future: _searchFuture,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState != ConnectionState.done) {
+                    return const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 24),
+                      child: Center(
+                        child: CircularProgressIndicator(
+                          color: AppColors.accent,
+                        ),
+                      ),
+                    );
+                  }
+                  if (snapshot.hasError) {
+                    return _LocationMessage(
+                      message: '지역 검색을 불러오지 못했어.',
+                      actionLabel: '입력한 지역으로 검색',
+                      onAction: () => widget.onManualRegion(_controller.text),
+                    );
+                  }
+                  final results = snapshot.data ?? const [];
+                  if (results.isEmpty) {
+                    return _LocationMessage(
+                      message: '검색 결과가 없어.',
+                      actionLabel: '입력한 지역으로 검색',
+                      onAction: () => widget.onManualRegion(_controller.text),
+                    );
+                  }
+                  return ConstrainedBox(
+                    constraints: const BoxConstraints(maxHeight: 260),
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      itemCount: results.length,
+                      separatorBuilder: (_, _) =>
+                          const Divider(height: 1, color: AppColors.border),
+                      itemBuilder: (context, index) {
+                        final item = results[index];
+                        return ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: Text(
+                            item.name,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.text,
+                            ),
+                          ),
+                          subtitle: Text(
+                            item.address,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(color: AppColors.sub),
+                          ),
+                          onTap: () => widget.onLocationSelected(item),
+                        );
+                      },
+                    ),
+                  );
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _LocationMessage extends StatelessWidget {
+  final String message;
+  final String actionLabel;
+  final VoidCallback onAction;
+
+  const _LocationMessage({
+    required this.message,
+    required this.actionLabel,
+    required this.onAction,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 18),
+      child: Column(
+        children: [
+          Text(
+            message,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: AppColors.sub,
+            ),
+          ),
+          const SizedBox(height: 10),
+          TextButton(onPressed: onAction, child: Text(actionLabel)),
+        ],
+      ),
+    );
   }
 }
 

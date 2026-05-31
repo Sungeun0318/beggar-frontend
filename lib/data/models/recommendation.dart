@@ -48,6 +48,7 @@ class RecommendedPlace {
   final String name;
   final String category;
   final int? expectedPrice;
+  final String? menuName;
   final String? walkTime;
   final double? rating;
   final String thumbnailUrl;
@@ -61,6 +62,7 @@ class RecommendedPlace {
     required this.name,
     required this.category,
     required this.expectedPrice,
+    required this.menuName,
     required this.walkTime,
     required this.rating,
     required this.thumbnailUrl,
@@ -76,6 +78,7 @@ class RecommendedPlace {
       name: json['name'] as String? ?? '',
       category: json['category'] as String? ?? '기타요식업',
       expectedPrice: json['expectedPrice'] as int?,
+      menuName: json['menuName'] as String?,
       walkTime: json['walkTime'] as String?,
       rating: (json['rating'] as num?)?.toDouble(),
       thumbnailUrl:

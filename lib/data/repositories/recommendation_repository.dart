@@ -11,10 +11,19 @@ class RecommendationRepository {
     required int roomNo,
     String? tag,
     String? region,
+    double? lat,
+    double? lng,
+    int? radius,
   }) async {
     final json = await _apiClient.get(
       '/rooms/$roomNo/recommend',
-      query: {'tag': tag, 'region': region},
+      query: {
+        'tag': tag,
+        'region': region,
+        'lat': lat?.toString(),
+        'lng': lng?.toString(),
+        'radius': radius?.toString(),
+      },
     );
     return RecommendationResult.fromJson(json);
   }
