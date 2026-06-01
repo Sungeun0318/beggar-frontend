@@ -5,8 +5,7 @@ import 'package:beggar_app/core/theme/app_colors.dart';
 class BottomNav extends StatelessWidget {
   final int activeIndex;
   final VoidCallback onHome;
-  final VoidCallback onExpense;
-  final VoidCallback onAdd;
+  final VoidCallback onCommunity;
   final VoidCallback onRanking;
   final VoidCallback onMy;
 
@@ -14,8 +13,7 @@ class BottomNav extends StatelessWidget {
     super.key,
     required this.activeIndex,
     required this.onHome,
-    required this.onExpense,
-    required this.onAdd,
+    required this.onCommunity,
     required this.onRanking,
     required this.onMy,
   });
@@ -32,81 +30,32 @@ class BottomNav extends StatelessWidget {
           color: Color(0xF2FFFFFF),
           border: Border(top: BorderSide(color: AppColors.border, width: 0.7)),
         ),
-        child: Stack(
-          clipBehavior: Clip.none,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                NavItem(
-                  icon: Icons.home_outlined,
-                  label: '홈',
-                  active: activeIndex == 0,
-                  onTap: onHome,
-                ),
-                NavItem(
-                  icon: Icons.receipt_long,
-                  label: '지출',
-                  active: activeIndex == 1,
-                  onTap: onExpense,
-                ),
-                const SizedBox(width: 56),
-                NavItem(
-                  icon: Icons.emoji_events_outlined,
-                  label: '랭킹',
-                  active: activeIndex == 3,
-                  onTap: onRanking,
-                ),
-                NavItem(
-                  icon: Icons.person_outline,
-                  label: '마이',
-                  active: activeIndex == 4,
-                  onTap: onMy,
-                ),
-              ],
+            NavItem(
+              icon: Icons.home_outlined,
+              label: '홈',
+              active: activeIndex == 0,
+              onTap: onHome,
             ),
-            Align(
-              alignment: Alignment.topCenter,
-              child: Transform.translate(
-                offset: const Offset(0, -16),
-                child: GestureDetector(
-                  onTap: onAdd,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 56,
-                        height: 56,
-                        decoration: BoxDecoration(
-                          gradient: AppColors.goldGradient,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: AppColors.bg, width: 4),
-                          boxShadow: const [
-                            BoxShadow(
-                              color: Color(0x4DD4AF37),
-                              blurRadius: 10,
-                              offset: Offset(0, 8),
-                            ),
-                          ],
-                        ),
-                        child: const Icon(
-                          Icons.add,
-                          color: Colors.white,
-                          size: 30,
-                        ),
-                      ),
-                      const Text(
-                        '추가',
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: AppColors.accent,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+            NavItem(
+              icon: Icons.forum_outlined,
+              label: '커뮤니티',
+              active: activeIndex == 1,
+              onTap: onCommunity,
+            ),
+            NavItem(
+              icon: Icons.emoji_events_outlined,
+              label: '랭킹',
+              active: activeIndex == 2,
+              onTap: onRanking,
+            ),
+            NavItem(
+              icon: Icons.person_outline,
+              label: '마이',
+              active: activeIndex == 3,
+              onTap: onMy,
             ),
           ],
         ),

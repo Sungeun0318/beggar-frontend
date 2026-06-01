@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:beggar_app/core/theme/app_colors.dart';
+import 'package:beggar_app/core/theme/app_radius.dart';
 import 'package:beggar_app/core/utils/decorations.dart';
 import 'package:beggar_app/core/utils/formatters.dart';
 
@@ -33,7 +34,7 @@ class RoomHomeCard extends StatelessWidget {
       child: Container(
         height: 158,
         padding: const EdgeInsets.all(18),
-        decoration: softBox(radius: 22, shadow: true),
+        decoration: softBox(radius: AppRadius.card, shadow: true),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -55,7 +56,7 @@ class RoomHomeCard extends StatelessWidget {
                   ),
                   decoration: BoxDecoration(
                     color: AppColors.accentBg,
-                    borderRadius: BorderRadius.circular(999),
+                    borderRadius: BorderRadius.circular(AppRadius.chip),
                   ),
                   child: Text(
                     status,
@@ -101,7 +102,7 @@ class RoomHomeCard extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             ClipRRect(
-              borderRadius: BorderRadius.circular(99),
+              borderRadius: BorderRadius.circular(AppRadius.chip),
               child: LinearProgressIndicator(
                 value: ratio,
                 minHeight: 8,

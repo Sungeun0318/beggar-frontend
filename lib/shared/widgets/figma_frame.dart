@@ -4,6 +4,7 @@ import 'package:beggar_app/core/theme/app_colors.dart';
 
 class FigmaFrame extends StatelessWidget {
   static const double designWidth = 393;
+  static const double designHeight = 852;
   static const double maxScale = 1.06;
 
   final Widget child;
@@ -21,10 +22,8 @@ class FigmaFrame extends StatelessWidget {
           final safeTop = MediaQuery.paddingOf(context).top;
           final availableHeight = constraints.maxHeight - safeTop - safeBottom;
           final widthScale = constraints.maxWidth / designWidth;
-          final heightScale = availableHeight / height;
-          final scale = height > 852
-              ? widthScale.clamp(0.0, maxScale)
-              : widthScale.clamp(0.0, heightScale).clamp(0.0, maxScale);
+          final heightScale = availableHeight / designHeight;
+          final scale = widthScale.clamp(0.0, heightScale).clamp(0.0, maxScale);
           final scaledHeight = height * scale;
 
           return SingleChildScrollView(
@@ -69,48 +68,5 @@ class StatusRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const SizedBox.shrink();
-  }
-}
-
-class ScreenHeader extends StatelessWidget {
-  final String title;
-  final VoidCallback onBack;
-
-  const ScreenHeader({super.key, required this.title, required this.onBack});
-
-  @override
-  Widget build(BuildContext context) {
-    return Positioned(
-      top: 55,
-      left: 8,
-      right: 8,
-      height: 42,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Align(
-            alignment: Alignment.centerLeft,
-            child: IconButton(
-              onPressed: onBack,
-              icon: const Icon(
-                Icons.chevron_left,
-                size: 30,
-                color: AppColors.text,
-              ),
-              padding: EdgeInsets.zero,
-            ),
-          ),
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.w600,
-              letterSpacing: -0.43,
-              height: 1.5,
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }

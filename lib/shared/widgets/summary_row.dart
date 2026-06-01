@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:beggar_app/core/theme/app_colors.dart';
+import 'package:beggar_app/core/theme/app_radius.dart';
 import 'package:beggar_app/core/utils/decorations.dart';
 
 class SummaryRow extends StatelessWidget {
@@ -22,7 +23,7 @@ class SummaryRow extends StatelessWidget {
     return Container(
       height: 65,
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: softBox(radius: 18),
+      decoration: softBox(radius: AppRadius.card),
       child: Row(
         children: [
           CircleAvatar(
@@ -51,7 +52,7 @@ class SummaryRow extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
               decoration: BoxDecoration(
                 color: AppColors.muted,
-                borderRadius: BorderRadius.circular(999),
+                borderRadius: BorderRadius.circular(AppRadius.chip),
               ),
               child: Text(
                 trailing!,

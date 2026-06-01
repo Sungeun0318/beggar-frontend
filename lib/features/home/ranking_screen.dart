@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import 'package:beggar_app/core/theme/app_colors.dart';
-import 'package:beggar_app/core/theme/assets.dart';
+import 'package:beggar_app/core/theme/app_radius.dart';
+import 'package:beggar_app/core/theme/app_spacing.dart';
+import 'package:beggar_app/shared/widgets/app_header.dart';
 import 'package:beggar_app/shared/widgets/figma_frame.dart';
 
 class RankingScreen extends StatelessWidget {
@@ -12,53 +14,15 @@ class RankingScreen extends StatelessWidget {
     return FigmaFrame(
       child: Stack(
         children: [
-          // Header
-          Positioned(
-            top: 55,
-            left: 24,
-            right: 24,
-            child: Row(
-              children: [
-                ClipOval(
-                  child: Image.asset(
-                    Assets.logo,
-                    width: 36,
-                    height: 36,
-                    fit: BoxFit.cover,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                const Text(
-                  '거지 우정 수호대',
-                  style: TextStyle(
-                    fontSize: 19,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: -0.92,
-                    color: AppColors.text,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // Title
-          const Positioned(
-            top: 119,
-            left: 24,
-            child: Text(
-              '거지 랭킹',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
-                letterSpacing: -0.45,
-                color: AppColors.text,
-              ),
-            ),
-          ),
-          // List
+          const AppHeader.brand(title: '거지 랭킹', showNotification: false),
           Positioned.fill(
-            top: 173,
+            top: AppSpacing.contentTop,
             child: ListView.separated(
-              padding: const EdgeInsets.only(left: 24, right: 24, bottom: 120),
+              padding: const EdgeInsets.only(
+                left: 24,
+                right: 24,
+                bottom: AppSpacing.bottomSafe,
+              ),
               itemCount: 15,
               separatorBuilder: (context, index) => const SizedBox(height: 10),
               itemBuilder: (context, index) {
@@ -79,11 +43,7 @@ class ParticipantRow extends StatelessWidget {
   final int rank;
   final String name;
 
-  const ParticipantRow({
-    super.key,
-    required this.rank,
-    required this.name,
-  });
+  const ParticipantRow({super.key, required this.rank, required this.name});
 
   @override
   Widget build(BuildContext context) {
@@ -92,29 +52,17 @@ class ParticipantRow extends StatelessWidget {
     Color? shadowColor;
 
     if (rank == 1) {
-      gradient = const LinearGradient(
-        colors: [Color(0xFFFFE7A2), Color(0xFFFFFBD0)],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      );
+      gradient = AppColors.medalGold;
       textColor = Colors.white;
-      shadowColor = Colors.black.withOpacity(0.25);
+      shadowColor = Colors.black.withValues(alpha: 0.25);
     } else if (rank == 2) {
-      gradient = const LinearGradient(
-        colors: [Color(0xFFF4F4F4), Color(0xFF8E8E8E)],
-        begin: Alignment.centerLeft,
-        end: Alignment.centerRight,
-      );
+      gradient = AppColors.medalSilver;
       textColor = Colors.white;
-      shadowColor = Colors.black.withOpacity(0.25);
+      shadowColor = Colors.black.withValues(alpha: 0.25);
     } else if (rank == 3) {
-      gradient = const LinearGradient(
-        colors: [Color(0xFFFFDBA9), Color(0xFFD0701B)],
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-      );
+      gradient = AppColors.medalBronze;
       textColor = Colors.white;
-      shadowColor = Colors.black.withOpacity(0.25);
+      shadowColor = Colors.black.withValues(alpha: 0.25);
     }
 
     return Container(
@@ -123,7 +71,7 @@ class ParticipantRow extends StatelessWidget {
       decoration: BoxDecoration(
         color: gradient == null ? Colors.white : null,
         gradient: gradient,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppRadius.card),
         border: Border.all(color: const Color(0xFFE8D9D9), width: 0.65),
         boxShadow: [
           if (shadowColor != null)
@@ -181,13 +129,13 @@ class ParticipantRow extends StatelessWidget {
           ),
           const Spacer(),
           // Character/Icon placeholder
-          Container(
+          SizedBox(
             width: 80,
             height: 60,
             child: Icon(
               rank <= 3 ? Icons.emoji_events : Icons.face,
               size: 40,
-              color: textColor.withOpacity(0.8),
+              color: textColor.withValues(alpha: 0.8),
             ),
           ),
         ],

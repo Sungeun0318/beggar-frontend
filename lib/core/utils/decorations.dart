@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 
 import 'package:beggar_app/core/theme/app_colors.dart';
+import 'package:beggar_app/core/theme/app_radius.dart';
 
 BoxDecoration softBox({
   Color color = Colors.white,
-  double radius = 16,
+  double radius = AppRadius.compact,
   bool shadow = false,
 }) {
   return BoxDecoration(

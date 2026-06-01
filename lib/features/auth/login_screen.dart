@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:beggar_app/core/theme/app_colors.dart';
+import 'package:beggar_app/core/theme/app_radius.dart';
 import 'package:beggar_app/core/theme/assets.dart';
 import 'package:beggar_app/core/utils/decorations.dart';
 import 'package:beggar_app/data/mock/mock_db.dart';
@@ -56,7 +57,7 @@ class LoginScreen extends StatelessWidget {
                 const SizedBox(height: 34),
                 Container(
                   padding: const EdgeInsets.all(16),
-                  decoration: softBox(radius: 20),
+                  decoration: softBox(radius: AppRadius.card),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -91,8 +92,8 @@ class LoginScreen extends StatelessWidget {
                 Container(
                   height: 56,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFEE500),
-                    borderRadius: BorderRadius.circular(18),
+                    color: AppColors.kakaoYellow,
+                    borderRadius: BorderRadius.circular(AppRadius.card),
                   ),
                   child: GestureDetector(
                     onTap: onLogin,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:beggar_app/core/theme/app_colors.dart';
+import 'package:beggar_app/core/theme/app_radius.dart';
 import 'package:beggar_app/core/utils/decorations.dart';
 
 class ActionBox extends StatelessWidget {
@@ -24,7 +25,7 @@ class ActionBox extends StatelessWidget {
       child: Container(
         height: 104,
         padding: const EdgeInsets.all(16),
-        decoration: softBox(radius: 18),
+        decoration: softBox(radius: AppRadius.card),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

@@ -17,9 +17,10 @@ class MockDb {
     ownerNo: 3,
     name: '명학역 데이트',
     code: 'abc001',
-    location: '명학역 1번 출구 근처',
-    tags: ['식사', '카페', '놀거리'],
+    location: '경기 안양시 만안구',
+    tags: ['한식'],
     memberCount: 4,
+    maxMemberCount: 8,
   );
 
   static const members = [
