@@ -152,7 +152,7 @@ class _CommunityPostDetailScreenState extends State<CommunityPostDetailScreen> {
           ),
           const SizedBox(width: 12),
           GestureDetector(
-            onPressed: _sendComment, // 전송 함수 연결
+            onTap: _sendComment, // 전송 함수 연결
             child: Container(
               width: 44,
               height: 44,
