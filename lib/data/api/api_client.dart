@@ -42,8 +42,22 @@ class ApiClient {
     }
   }
 
-  Future<Map<String, dynamic>> post(String path, {Object? body}) {
-    throw UnimplementedError('ApiClient.post — 백엔드 연동 후 구현');
+// 앱이 '10.0.2.2:38326' 으로 접속
+  Future<Map<String, dynamic>> post(String path, {Object? body}) async {
+    final uri = _uri(path, {});
+    final client = HttpClient()..connectionTimeout = ApiConfig.connectTimeout;
+    try {
+      final request = await client.postUrl(uri);
+      request.headers.set(HttpHeaders.contentTypeHeader, 'application/json');
+      request.headers.set(HttpHeaders.acceptHeader, 'application/json');
+      if (body != null) {
+        request.add(utf8.encode(jsonEncode(body)));
+      }
+      final response = await request.close().timeout(ApiConfig.receiveTimeout);
+      return _decode(response);
+    } finally {
+      client.close(force: true);
+    }
   }
 
   Uri _uri(String path, Map<String, String?> query) {
