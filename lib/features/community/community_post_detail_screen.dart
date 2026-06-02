@@ -7,10 +7,18 @@ import 'package:beggar_app/core/utils/decorations.dart';
 import 'package:beggar_app/shared/widgets/app_header.dart';
 import 'package:beggar_app/shared/widgets/figma_frame.dart';
 
+import 'package:beggar_app/data/api/api_client.dart';
+import 'package:beggar_app/data/repositories/room_free_repository.dart';
+
 class CommunityPostDetailScreen extends StatefulWidget {
   final VoidCallback onBack;
+  final int postId; // 게시글 ID 추가
 
-  const CommunityPostDetailScreen({super.key, required this.onBack});
+  const CommunityPostDetailScreen({
+    super.key,
+    required this.onBack,
+    this.postId = 1, // 프로토타입용 기본값
+  });
 
   @override
   State<CommunityPostDetailScreen> createState() => _CommunityPostDetailScreenState();
@@ -18,11 +26,36 @@ class CommunityPostDetailScreen extends StatefulWidget {
 
 class _CommunityPostDetailScreenState extends State<CommunityPostDetailScreen> {
   final TextEditingController _commentController = TextEditingController();
+  final RoomFreeRepository _repository = RoomFreeRepository(ApiClient()); // 리포지토리 준비
 
   @override
   void dispose() {
     _commentController.dispose();
     super.dispose();
+  }
+
+  // 댓글 전송 함수
+  Future<void> _sendComment() async {
+    final content = _commentController.text.trim();
+    if (content.isEmpty) return;
+
+    try {
+      await _repository.createComment(widget.postId, content);
+      
+      if (mounted) {
+        _commentController.clear();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('댓글이 등록되었습니다.')),
+        );
+        // TODO: 댓글 목록을 새로고침하는 로직이 필요할 수 있습니다.
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('전송 실패: $e')),
+        );
+      }
+    }
   }
 
   @override
@@ -40,7 +73,7 @@ class _CommunityPostDetailScreenState extends State<CommunityPostDetailScreen> {
               padding: const EdgeInsets.only(
                 left: AppSpacing.pageH,
                 right: AppSpacing.pageH,
-                bottom: 100, // 입력창 높이만큼 하단 여백 추가
+                bottom: 120, // 입력창 높이 고려
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -119,12 +152,7 @@ class _CommunityPostDetailScreenState extends State<CommunityPostDetailScreen> {
           ),
           const SizedBox(width: 12),
           GestureDetector(
-            onPressed: () {
-              if (_commentController.text.isNotEmpty) {
-                // TODO: 댓글 전송 로직 구현
-                _commentController.clear();
-              }
-            },
+            onPressed: _sendComment, // 전송 함수 연결
             child: Container(
               width: 44,
               height: 44,
