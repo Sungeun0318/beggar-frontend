@@ -7,24 +7,41 @@ import 'package:beggar_app/core/utils/decorations.dart';
 import 'package:beggar_app/shared/widgets/app_header.dart';
 import 'package:beggar_app/shared/widgets/figma_frame.dart';
 
-class CommunityPostDetailScreen extends StatelessWidget {
+class CommunityPostDetailScreen extends StatefulWidget {
   final VoidCallback onBack;
 
   const CommunityPostDetailScreen({super.key, required this.onBack});
+
+  @override
+  State<CommunityPostDetailScreen> createState() => _CommunityPostDetailScreenState();
+}
+
+class _CommunityPostDetailScreenState extends State<CommunityPostDetailScreen> {
+  final TextEditingController _commentController = TextEditingController();
+
+  @override
+  void dispose() {
+    _commentController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return FigmaFrame(
       child: Stack(
         children: [
-          AppHeader.titled(title: '게시글', onBack: onBack),
+          AppHeader.titled(title: '게시글', onBack: widget.onBack),
           Positioned(
             top: AppSpacing.contentTop,
             left: 0,
             right: 0,
             bottom: 0,
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.pageH),
+              padding: const EdgeInsets.only(
+                left: AppSpacing.pageH,
+                right: AppSpacing.pageH,
+                bottom: 100, // 입력창 높이만큼 하단 여백 추가
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: const [
@@ -45,6 +62,77 @@ class CommunityPostDetailScreen extends StatelessWidget {
                   SizedBox(height: AppSpacing.bottomSafe),
                 ],
               ),
+            ),
+          ),
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: _buildCommentInput(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCommentInput() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 34),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, -5),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                color: AppColors.bg,
+                borderRadius: BorderRadius.circular(AppRadius.card),
+              ),
+              child: TextField(
+                controller: _commentController,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.text,
+                ),
+                decoration: const InputDecoration(
+                  hintText: '댓글을 입력하세요...',
+                  hintStyle: TextStyle(
+                    fontSize: 14,
+                    color: AppColors.lightSub,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.symmetric(vertical: 12),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          GestureDetector(
+            onPressed: () {
+              if (_commentController.text.isNotEmpty) {
+                // TODO: 댓글 전송 로직 구현
+                _commentController.clear();
+              }
+            },
+            child: Container(
+              width: 44,
+              height: 44,
+              decoration: const BoxDecoration(
+                color: AppColors.accent,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.send, color: Colors.white, size: 20),
             ),
           ),
         ],
