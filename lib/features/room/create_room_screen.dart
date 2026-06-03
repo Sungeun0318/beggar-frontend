@@ -63,13 +63,13 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
 
       if (response.statusCode == 200) {
         final result = jsonDecode(utf8.decode(response.bodyBytes));
-        print("방 생성 성공: $result");
+        debugPrint("방 생성 성공: $result");
         widget.onNext();
       } else {
-        print("서버 에러: ${response.statusCode}");
+        debugPrint("서버 에러: ${response.statusCode}");
       }
     } catch (e) {
-      print("연결 실패: $e");
+      debugPrint("연결 실패: $e");
     }
   }
 
@@ -315,7 +315,7 @@ class _SearchAddressPageState extends State<SearchAddressPage> {
         }
       }
     } catch (e) {
-      print("카카오 로컬 API 호출 실패: $e");
+      debugPrint("카카오 로컬 API 호출 실패: $e");
     } finally {
       setState(() { _isLoading = false; });
     }

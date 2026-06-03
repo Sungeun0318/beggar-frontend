@@ -25,39 +25,6 @@ class CommunityPostDetailScreen extends StatefulWidget {
 }
 
 class _CommunityPostDetailScreenState extends State<CommunityPostDetailScreen> {
-  final TextEditingController _commentController = TextEditingController();
-  final RoomFreeRepository _repository = RoomFreeRepository(ApiClient()); // 리포지토리 준비
-
-  @override
-  void dispose() {
-    _commentController.dispose();
-    super.dispose();
-  }
-
-  // 댓글 전송 함수
-  Future<void> _sendComment() async {
-    final content = _commentController.text.trim();
-    if (content.isEmpty) return;
-
-    try {
-      await _repository.createComment(widget.postId, content);
-      
-      if (mounted) {
-        _commentController.clear();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('댓글이 등록되었습니다.')),
-        );
-        // TODO: 댓글 목록을 새로고침하는 로직이 필요할 수 있습니다.
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('전송 실패: $e')),
-        );
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return FigmaFrame(
@@ -97,73 +64,136 @@ class _CommunityPostDetailScreenState extends State<CommunityPostDetailScreen> {
               ),
             ),
           ),
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: _buildCommentInput(),
-          ),
         ],
       ),
     );
   }
+}
+
+class CommunityCommentBar extends StatefulWidget {
+  final int postId;
+
+  const CommunityCommentBar({super.key, this.postId = 1});
+
+  @override
+  State<CommunityCommentBar> createState() => _CommunityCommentBarState();
+}
+
+class _CommunityCommentBarState extends State<CommunityCommentBar> {
+  final TextEditingController _commentController = TextEditingController();
+  final RoomFreeRepository _repository = RoomFreeRepository(ApiClient());
+
+  @override
+  void dispose() {
+    _commentController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _sendComment() async {
+    final content = _commentController.text.trim();
+    if (content.isEmpty) return;
+
+    try {
+      await _repository.createComment(widget.postId, content);
+      if (!mounted) return;
+      _commentController.clear();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('댓글이 등록되었습니다.')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('전송 실패: $e')),
+      );
+    }
+  }
 
   Widget _buildCommentInput() {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 34),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, -5),
+    final keyboardBottom = MediaQuery.viewInsetsOf(context).bottom;
+
+    return Positioned(
+      left: 0,
+      right: 0,
+      bottom: 0,
+      child: AnimatedPadding(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOutCubic,
+        padding: EdgeInsets.only(bottom: keyboardBottom),
+        child: Material(
+          color: Colors.transparent,
+          child: _CommentInputSurface(
+            controller: _commentController,
+            onSend: _sendComment,
           ),
-        ],
+        ),
       ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              decoration: BoxDecoration(
-                color: AppColors.bg,
-                borderRadius: BorderRadius.circular(AppRadius.card),
-              ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) => _buildCommentInput();
+}
+
+class _CommentInputSurface extends StatelessWidget {
+  final TextEditingController controller;
+  final VoidCallback onSend;
+
+  const _CommentInputSurface({
+    required this.controller,
+    required this.onSend,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 92,
+      padding: const EdgeInsets.fromLTRB(24, 12, 24, 18),
+      decoration: BoxDecoration(
+        color: const Color(0xF2FFFFFF),
+        border: const Border(
+          top: BorderSide(color: AppColors.border, width: 0.7),
+        ),
+      ),
+      child: Container(
+        height: 52,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: softBox(radius: AppRadius.chip, shadow: true),
+        child: Row(
+          children: [
+            Expanded(
               child: TextField(
-                controller: _commentController,
+                controller: controller,
+                textInputAction: TextInputAction.send,
+                onSubmitted: (_) => onSend(),
+                cursorColor: AppColors.accent,
                 style: const TextStyle(
                   fontSize: 14,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w700,
                   color: AppColors.text,
                 ),
                 decoration: const InputDecoration(
-                  hintText: '댓글을 입력하세요...',
+                  hintText: '댓글 입력',
                   hintStyle: TextStyle(
                     fontSize: 14,
-                    color: AppColors.lightSub,
-                    fontWeight: FontWeight.w600,
+                    color: AppColors.placeholder,
+                    fontWeight: FontWeight.w700,
                   ),
                   border: InputBorder.none,
-                  contentPadding: EdgeInsets.symmetric(vertical: 12),
+                  isDense: true,
+                  contentPadding: EdgeInsets.zero,
                 ),
               ),
             ),
-          ),
-          const SizedBox(width: 12),
-          GestureDetector(
-            onTap: _sendComment, // 전송 함수 연결
-            child: Container(
-              width: 44,
-              height: 44,
-              decoration: const BoxDecoration(
+            IconButton(
+              onPressed: onSend,
+              icon: const Icon(
+                Icons.send_outlined,
                 color: AppColors.accent,
-                shape: BoxShape.circle,
+                size: 22,
               ),
-              child: const Icon(Icons.send, color: Colors.white, size: 20),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
