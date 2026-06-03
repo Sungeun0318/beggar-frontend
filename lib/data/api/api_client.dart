@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -13,16 +14,20 @@ class ApiClient {
     Map<String, String?> query = const {},
   }) async {
     final uri = _uri(path, query);
-    final client = HttpClient()..connectionTimeout = ApiConfig.connectTimeout;
-    try {
-      final request = await client.getUrl(uri);
-      request.headers.set(HttpHeaders.acceptHeader, 'application/json');
-      request.headers.set(HttpHeaders.connectionHeader, 'close');
-      final response = await request.close().timeout(ApiConfig.receiveTimeout);
-      return _decode(response);
-    } finally {
-      client.close(force: true);
-    }
+    return _sendWithRetry(() async {
+      final client = HttpClient()..connectionTimeout = ApiConfig.connectTimeout;
+      try {
+        final request = await client.getUrl(uri);
+        request.headers.set(HttpHeaders.acceptHeader, 'application/json');
+        request.headers.set(HttpHeaders.connectionHeader, 'close');
+        final response = await request
+            .close()
+            .timeout(ApiConfig.receiveTimeout);
+        return _decode(response);
+      } finally {
+        client.close(force: true);
+      }
+    });
   }
 
   Future<List<dynamic>> getList(
@@ -30,34 +35,41 @@ class ApiClient {
     Map<String, String?> query = const {},
   }) async {
     final uri = _uri(path, query);
-    final client = HttpClient()..connectionTimeout = ApiConfig.connectTimeout;
-    try {
-      final request = await client.getUrl(uri);
-      request.headers.set(HttpHeaders.acceptHeader, 'application/json');
-      request.headers.set(HttpHeaders.connectionHeader, 'close');
-      final response = await request.close().timeout(ApiConfig.receiveTimeout);
-      return _decodeList(response);
-    } finally {
-      client.close(force: true);
-    }
+    return _sendWithRetry(() async {
+      final client = HttpClient()..connectionTimeout = ApiConfig.connectTimeout;
+      try {
+        final request = await client.getUrl(uri);
+        request.headers.set(HttpHeaders.acceptHeader, 'application/json');
+        request.headers.set(HttpHeaders.connectionHeader, 'close');
+        final response = await request
+            .close()
+            .timeout(ApiConfig.receiveTimeout);
+        return _decodeList(response);
+      } finally {
+        client.close(force: true);
+      }
+    });
   }
 
-// 앱이 '10.0.2.2:38326' 으로 접속
   Future<Map<String, dynamic>> post(String path, {Object? body}) async {
     final uri = _uri(path, {});
-    final client = HttpClient()..connectionTimeout = ApiConfig.connectTimeout;
-    try {
-      final request = await client.postUrl(uri);
-      request.headers.set(HttpHeaders.contentTypeHeader, 'application/json');
-      request.headers.set(HttpHeaders.acceptHeader, 'application/json');
-      if (body != null) {
-        request.add(utf8.encode(jsonEncode(body)));
+    return _sendWithRetry(() async {
+      final client = HttpClient()..connectionTimeout = ApiConfig.connectTimeout;
+      try {
+        final request = await client.postUrl(uri);
+        request.headers.set(HttpHeaders.contentTypeHeader, 'application/json');
+        request.headers.set(HttpHeaders.acceptHeader, 'application/json');
+        if (body != null) {
+          request.add(utf8.encode(jsonEncode(body)));
+        }
+        final response = await request
+            .close()
+            .timeout(ApiConfig.receiveTimeout);
+        return _decode(response);
+      } finally {
+        client.close(force: true);
       }
-      final response = await request.close().timeout(ApiConfig.receiveTimeout);
-      return _decode(response);
-    } finally {
-      client.close(force: true);
-    }
+    });
   }
 
   Uri _uri(String path, Map<String, String?> query) {
@@ -94,6 +106,52 @@ class ApiClient {
       throw ApiException(response.statusCode, message);
     }
     return decoded as List<dynamic>;
+  }
+
+  Future<T> _sendWithRetry<T>(Future<T> Function() send) async {
+    Object? lastError;
+    for (var attempt = 0; attempt < ApiConfig.maxRetryCount; attempt++) {
+      try {
+        return await send();
+      } catch (error) {
+        lastError = error;
+        if (!_shouldRetry(error) || attempt == ApiConfig.maxRetryCount - 1) {
+          break;
+        }
+        await Future<void>.delayed(ApiConfig.retryDelay * (attempt + 1));
+      }
+    }
+    throw _toUserFacingException(lastError);
+  }
+
+  bool _shouldRetry(Object error) {
+    if (error is TimeoutException ||
+        error is SocketException ||
+        error is HttpException) {
+      return true;
+    }
+    if (error is ApiException) {
+      return error.statusCode == 502 ||
+          error.statusCode == 503 ||
+          error.statusCode == 504;
+    }
+    return false;
+  }
+
+  Exception _toUserFacingException(Object? error) {
+    if (error is ApiException) {
+      return error;
+    }
+    if (error is TimeoutException) {
+      return const ApiException(408, '응답이 늦어지고 있어. 잠시 후 다시 시도해줘.');
+    }
+    if (error is SocketException || error is HttpException) {
+      return const ApiException(0, '서버와 연결하지 못했어. 실행 주소를 확인해줘.');
+    }
+    if (error is Exception) {
+      return error;
+    }
+    return const ApiException(0, 'API 요청에 실패했어요.');
   }
 }
 
