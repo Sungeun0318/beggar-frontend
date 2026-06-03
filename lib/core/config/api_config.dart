@@ -20,4 +20,6 @@ class ApiConfig {
 
   static const Duration connectTimeout = Duration(seconds: 10);
   static const Duration receiveTimeout = Duration(seconds: 15);
+  static const int maxRetryCount = 3;
+  static const Duration retryDelay = Duration(milliseconds: 700);
 }

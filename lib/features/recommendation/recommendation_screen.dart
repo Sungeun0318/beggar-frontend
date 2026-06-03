@@ -109,6 +109,12 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
     });
   }
 
+  void _retryRecommendation() {
+    setState(() {
+      _recommendationFuture = _loadRecommendation();
+    });
+  }
+
   Future<void> _useCurrentLocation() async {
     final enabled = await Geolocator.isLocationServiceEnabled();
     if (!enabled) {
@@ -229,6 +235,7 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
                 if (snapshot.hasError) {
                   return _RecommendationError(
                     message: snapshot.error.toString(),
+                    onRetry: _retryRecommendation,
                   );
                 }
                 final result = snapshot.data!;
@@ -504,6 +511,7 @@ class _LocationSheetState extends State<_LocationSheet> {
   final LocationRepository _locationRepository = LocationRepository();
   final TextEditingController _controller = TextEditingController();
   Future<List<LocationSearchResult>>? _searchFuture;
+  bool _isSearching = false;
 
   @override
   void dispose() {
@@ -513,11 +521,25 @@ class _LocationSheetState extends State<_LocationSheet> {
 
   void _search() {
     final query = _controller.text.trim();
-    if (query.isEmpty) {
+    if (query.isEmpty || _isSearching) {
       return;
     }
+    FocusScope.of(context).unfocus();
+    debugPrint('Location search query=$query');
+    final searchFuture = Future<void>.delayed(
+      const Duration(milliseconds: 300),
+    ).then((_) => _locationRepository.search(query));
+    searchFuture.whenComplete(() {
+      if (!mounted || _searchFuture != searchFuture) {
+        return;
+      }
+      setState(() {
+        _isSearching = false;
+      });
+    });
     setState(() {
-      _searchFuture = _locationRepository.search(query);
+      _isSearching = true;
+      _searchFuture = searchFuture;
     });
   }
 
@@ -566,7 +588,7 @@ class _LocationSheetState extends State<_LocationSheet> {
             ),
             const SizedBox(height: 14),
             OutlinedButton.icon(
-              onPressed: widget.onCurrentLocation,
+              onPressed: _isSearching ? null : widget.onCurrentLocation,
               icon: const Icon(Icons.my_location, size: 18),
               label: const Text('현재 위치 사용'),
               style: OutlinedButton.styleFrom(
@@ -603,8 +625,17 @@ class _LocationSheetState extends State<_LocationSheet> {
                 ),
                 const SizedBox(width: 8),
                 IconButton.filled(
-                  onPressed: _search,
-                  icon: const Icon(Icons.search),
+                  onPressed: _isSearching ? null : _search,
+                  icon: _isSearching
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Icon(Icons.search),
                   style: IconButton.styleFrom(
                     backgroundColor: AppColors.accent,
                     foregroundColor: Colors.white,
@@ -870,8 +901,9 @@ class _RecommendationLoading extends StatelessWidget {
 
 class _RecommendationError extends StatelessWidget {
   final String message;
+  final VoidCallback onRetry;
 
-  const _RecommendationError({required this.message});
+  const _RecommendationError({required this.message, required this.onRetry});
 
   @override
   Widget build(BuildContext context) {
@@ -881,15 +913,22 @@ class _RecommendationError extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(18),
           decoration: softBox(radius: AppRadius.card),
-          child: Text(
-            '추천을 불러오지 못했어요.\n$message',
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 14,
-              height: 1.5,
-              fontWeight: FontWeight.w600,
-              color: AppColors.darkSub,
-            ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '추천을 불러오지 못했어요.\n$message',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 14,
+                  height: 1.5,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.darkSub,
+                ),
+              ),
+              const SizedBox(height: 16),
+              PrimaryButton(label: '다시 불러오기', onTap: onRetry),
+            ],
           ),
         ),
       ),
