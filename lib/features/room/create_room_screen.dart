@@ -19,6 +19,9 @@ import 'package:beggar_app/shared/widgets/primary_button.dart';
 import 'package:beggar_app/shared/widgets/round_icon.dart';
 import 'package:beggar_app/shared/widgets/section_title.dart';
 
+// [친구 초대 화면] 불러오기
+import 'package:beggar_app/features/room/invite_room_screen.dart';
+
 class CreateRoomScreen extends StatefulWidget {
   final VoidCallback onBack;
   final VoidCallback onNext;
@@ -74,25 +77,44 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
           "roomName": _roomNameController.text,
           "tags": [_selectedTag],
           "isFriends": false,
-          "location": _selectedLocation!.address.isEmpty
-              ? _selectedLocation!.name
-              : _selectedLocation!.address,
+          "location": _selectedLocation!.name.isEmpty
+              ? _selectedLocation!.address
+              : _selectedLocation!.name,
           "maxMemberCount": _maxMemberCount,
         }),
       ).timeout(ApiConfig.receiveTimeout);
 
       if (response.statusCode == 200) {
-        final result = jsonDecode(utf8.decode(response.bodyBytes));
-        debugPrint("방 생성 성공: $result");
-        widget.onNext();
+        final jsonResponse = jsonDecode(utf8.decode(response.bodyBytes));
+        final result = jsonResponse['data']; // ApiResponse 내부의 RoomResponse 추출!
+
+        debugPrint("백엔드 방 생성 완료 데이터 수신: $result");
+
+        if (mounted) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => InviteRoomScreen(
+                roomName: _roomNameController.text,
+                location: _selectedLocation!.name.isEmpty
+                    ? _selectedLocation!.address
+                    : _selectedLocation!.name,
+                maxMemberCount: _maxMemberCount,
+                inviteCode: result['roomCode'] ?? 'abc001', // 🎲 백엔드가 발급한 진짜 12자리 코드 매핑!
+                onBack: widget.onBack,
+                onNext: widget.onNext,
+              ),
+            ),
+          );
+        }
       } else {
         final body = utf8.decode(response.bodyBytes);
         debugPrint("서버 에러: ${response.statusCode} $body");
-        _showSnackBar('방 생성에 실패했어. (${response.statusCode})');
+        _showSnackBar('방 생성에 실패했어요. (${response.statusCode})');
       }
     } catch (e) {
       debugPrint("연결 실패: $e");
-      _showSnackBar('서버와 연결하지 못했어.');
+      _showSnackBar('서버와 연결하지 못했어요.');
     } finally {
       if (mounted) {
         setState(() {
@@ -161,7 +183,6 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
                   const SectionTitle('어디서 모이나요?'),
                   const SizedBox(height: 13),
 
-                  // 🌟 장소 칸 터치 시 카카오 진짜 키보드 검색창 화면으로 이동!
                   GestureDetector(
                     onTap: () async {
                       final result = await Navigator.push<LocationSearchResult>(
@@ -181,8 +202,8 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
                       label: _selectedLocation == null
                           ? _locationPlaceholder
                           : (_selectedLocation!.name.isEmpty
-                                ? _selectedLocation!.address
-                                : _selectedLocation!.name),
+                          ? _selectedLocation!.address
+                          : _selectedLocation!.name),
                       icon: Icons.location_on_outlined,
                       selected: _selectedLocation != null,
                     ),
@@ -306,10 +327,10 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
   }
 
   Widget _buildTagChoice(
-    String label,
-    IconData icon, {
-    bool isFullWidth = false,
-  }) {
+      String label,
+      IconData icon, {
+        bool isFullWidth = false,
+      }) {
     final isSelected = _selectedTag == label;
     Widget choice = ChoiceBox(icon: icon, label: label);
 
@@ -322,9 +343,9 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
       child: Container(
         decoration: isSelected
             ? BoxDecoration(
-                border: Border.all(color: AppColors.brown, width: 2),
-                borderRadius: BorderRadius.circular(AppRadius.compact),
-              )
+          border: Border.all(color: AppColors.brown, width: 2),
+          borderRadius: BorderRadius.circular(AppRadius.compact),
+        )
             : null,
         child: choice,
       ),
@@ -332,7 +353,7 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
   }
 }
 
-// 카카오 통합 키보드 검색창
+// 카카오 통합 키보드 검색창 (나머지 하단 코드는 온전히 유지)
 class SearchAddressPage extends StatefulWidget {
   const SearchAddressPage({super.key});
 
@@ -360,7 +381,7 @@ class _SearchAddressPageState extends State<SearchAddressPage> {
     _debounceTimer?.cancel();
     _debounceTimer = Timer(
       const Duration(milliseconds: 350),
-      () => _searchLocation(query),
+          () => _searchLocation(query),
     );
   }
 
@@ -396,7 +417,7 @@ class _SearchAddressPageState extends State<SearchAddressPage> {
       }
       setState(() {
         _isLoading = false;
-        _errorMessage = '지역 검색을 불러오지 못했어.';
+        _errorMessage = '지역 검색을 불러오지 못했어요.';
       });
     }
   }
@@ -421,7 +442,6 @@ class _SearchAddressPageState extends State<SearchAddressPage> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            // 카카오 검색어 타이핑 입력창
             TextField(
               controller: _searchController,
               onChanged: _onSearchChanged,
@@ -440,67 +460,66 @@ class _SearchAddressPageState extends State<SearchAddressPage> {
             ),
             const SizedBox(height: 16),
 
-            // 쭈루룩 나열될 카카오 실제 검색 결과 공간
             Expanded(
               child: _isLoading
                   ? const Center(
-                      child: CircularProgressIndicator(color: AppColors.brown),
-                    )
+                child: CircularProgressIndicator(color: AppColors.brown),
+              )
                   : _errorMessage != null
                   ? Center(
-                      child: Text(
-                        _errorMessage!,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(color: AppColors.sub),
-                      ),
-                    )
+                child: Text(
+                  _errorMessage!,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: AppColors.sub),
+                ),
+              )
                   : _searchResults.isEmpty
                   ? const Center(
-                      child: Text(
-                        '검색 결과가 없습니다.\n궁금한 지하철역 명칭을 입력창에 쳐보세요!',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: AppColors.sub),
-                      ),
-                    )
+                child: Text(
+                  '검색 결과가 없습니다.\n궁금한 지하철역 명칭을 입력창에 쳐보세요!',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: AppColors.sub),
+                ),
+              )
                   : ListView.builder(
-                      itemCount: _searchResults.length,
-                      itemBuilder: (context, index) {
-                        final item = _searchResults[index];
-                        final placeName = item.name.isEmpty
-                            ? item.address
-                            : item.name;
-                        final addressName = item.address;
+                itemCount: _searchResults.length,
+                itemBuilder: (context, index) {
+                  final item = _searchResults[index];
+                  final placeName = item.name.isEmpty
+                      ? item.address
+                      : item.name;
+                  final addressName = item.address;
 
-                        return ListTile(
-                          leading: const Icon(
-                            Icons.location_on_outlined,
-                            color: AppColors.brown,
-                          ),
-                          title: Text(
-                            placeName,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 15,
-                            ),
-                          ),
-                          subtitle: Text(
-                            addressName,
-                            style: const TextStyle(
-                              color: AppColors.sub,
-                              fontSize: 12,
-                            ),
-                          ),
-                          trailing: const Icon(
-                            Icons.arrow_forward_ios,
-                            size: 12,
-                            color: AppColors.sub,
-                          ),
-                          onTap: () {
-                            Navigator.pop(context, item);
-                          },
-                        );
-                      },
+                  return ListTile(
+                    leading: const Icon(
+                      Icons.location_on_outlined,
+                      color: AppColors.brown,
                     ),
+                    title: Text(
+                      placeName,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
+                    ),
+                    subtitle: Text(
+                      addressName,
+                      style: const TextStyle(
+                        color: AppColors.sub,
+                        fontSize: 12,
+                      ),
+                    ),
+                    trailing: const Icon(
+                      Icons.arrow_forward_ios,
+                      size: 12,
+                      color: AppColors.sub,
+                    ),
+                    onTap: () {
+                      Navigator.pop(context, item);
+                    },
+                  );
+                },
+              ),
             ),
           ],
         ),
