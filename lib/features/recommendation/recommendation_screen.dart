@@ -45,19 +45,22 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
 
   final RecommendationRepository _recommendationRepository =
       RecommendationRepository();
-  late Future<RecommendationResult> _recommendationFuture;
   late String _selectedTag;
   late String _selectedRegion;
   String? _selectedRegionQuery;
   double? _selectedLat;
   double? _selectedLng;
+  RecommendationResult? _recommendationResult;
+  Object? _recommendationError;
+  bool _isLoadingRecommendation = false;
+  int _recommendationRequestId = 0;
 
   @override
   void initState() {
     super.initState();
     _selectedTag = widget.initialTag;
     _selectedRegion = widget.region;
-    _recommendationFuture = _loadRecommendation();
+    _refreshRecommendation(showFullLoading: true);
   }
 
   Future<RecommendationResult> _loadRecommendation() {
@@ -79,8 +82,8 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
     }
     setState(() {
       _selectedTag = tag;
-      _recommendationFuture = _loadRecommendation();
     });
+    _refreshRecommendation();
   }
 
   void _selectLocation(LocationSearchResult location) {
@@ -91,8 +94,8 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
       _selectedRegionQuery = _regionQuery(location.address);
       _selectedLat = location.lat;
       _selectedLng = location.lng;
-      _recommendationFuture = _loadRecommendation();
     });
+    _refreshRecommendation(showFullLoading: true);
   }
 
   void _selectManualRegion(String region) {
@@ -105,8 +108,47 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
       _selectedRegionQuery = trimmed;
       _selectedLat = null;
       _selectedLng = null;
-      _recommendationFuture = _loadRecommendation();
     });
+    _refreshRecommendation(showFullLoading: true);
+  }
+
+  void _retryRecommendation() {
+    _refreshRecommendation(showFullLoading: true);
+  }
+
+  Future<void> _refreshRecommendation({bool showFullLoading = false}) async {
+    final requestId = ++_recommendationRequestId;
+    setState(() {
+      _isLoadingRecommendation = true;
+      _recommendationError = null;
+      if (showFullLoading) {
+        _recommendationResult = null;
+      }
+    });
+
+    try {
+      final result = await _loadRecommendation();
+      if (!mounted || requestId != _recommendationRequestId) {
+        return;
+      }
+      setState(() {
+        _recommendationResult = result;
+        _recommendationError = null;
+        _isLoadingRecommendation = false;
+      });
+    } catch (error, stackTrace) {
+      debugPrint('Recommendation request failed\n$error\n$stackTrace');
+      if (!mounted || requestId != _recommendationRequestId) {
+        return;
+      }
+      setState(() {
+        _recommendationError = error;
+        _isLoadingRecommendation = false;
+      });
+      if (_recommendationResult != null) {
+        _showSnack('추천 갱신에 실패했어. 이전 추천을 유지할게.');
+      }
+    }
   }
 
   Future<void> _useCurrentLocation() async {
@@ -147,8 +189,8 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
         _selectedRegionQuery = null;
         _selectedLat = position.latitude;
         _selectedLng = position.longitude;
-        _recommendationFuture = _loadRecommendation();
       });
+      _refreshRecommendation(showFullLoading: true);
     } catch (error, stackTrace) {
       debugPrint('Current location failed\n$error\n$stackTrace');
       _showSnack('현재 위치를 가져오지 못했어.');
@@ -205,7 +247,7 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
       _selectedRegionQuery = null;
       _selectedLat = null;
       _selectedLng = null;
-      _recommendationFuture = _loadRecommendation();
+      _refreshRecommendation(showFullLoading: true);
     }
   }
 
@@ -220,32 +262,48 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
             left: 0,
             right: 0,
             bottom: 0,
-            child: FutureBuilder<RecommendationResult>(
-              future: _recommendationFuture,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState != ConnectionState.done) {
-                  return const _RecommendationLoading();
-                }
-                if (snapshot.hasError) {
-                  return _RecommendationError(
-                    message: snapshot.error.toString(),
-                  );
-                }
-                final result = snapshot.data!;
-                return _RecommendationContent(
-                  result: result,
-                  selectedRegion: _selectedRegion,
-                  tags: widget.tags,
-                  selectedTag: _selectedTag,
-                  onTagSelected: _selectTag,
-                  onLocationTap: _openLocationSheet,
-                  onDone: widget.onDone,
-                );
-              },
-            ),
+            child: _buildRecommendationBody(),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildRecommendationBody() {
+    final result = _recommendationResult;
+    if (result == null) {
+      if (_isLoadingRecommendation) {
+        return const _RecommendationLoading();
+      }
+      return _RecommendationError(
+        message: _recommendationError?.toString() ?? '추천 결과가 아직 없어.',
+        onRetry: _retryRecommendation,
+      );
+    }
+
+    return Stack(
+      children: [
+        _RecommendationContent(
+          result: result,
+          selectedRegion: _selectedRegion,
+          tags: widget.tags,
+          selectedTag: _selectedTag,
+          onTagSelected: _selectTag,
+          onLocationTap: _openLocationSheet,
+          onDone: widget.onDone,
+        ),
+        if (_isLoadingRecommendation)
+          const Positioned(
+            top: 0,
+            left: AppSpacing.pageH,
+            right: AppSpacing.pageH,
+            child: LinearProgressIndicator(
+              minHeight: 3,
+              color: AppColors.accent,
+              backgroundColor: AppColors.muted,
+            ),
+          ),
+      ],
     );
   }
 
@@ -503,7 +561,10 @@ class _LocationSheet extends StatefulWidget {
 class _LocationSheetState extends State<_LocationSheet> {
   final LocationRepository _locationRepository = LocationRepository();
   final TextEditingController _controller = TextEditingController();
-  Future<List<LocationSearchResult>>? _searchFuture;
+  List<LocationSearchResult> _searchResults = [];
+  String? _searchError;
+  bool _isSearching = false;
+  int _searchRequestId = 0;
 
   @override
   void dispose() {
@@ -511,14 +572,39 @@ class _LocationSheetState extends State<_LocationSheet> {
     super.dispose();
   }
 
-  void _search() {
+  Future<void> _search() async {
     final query = _controller.text.trim();
-    if (query.isEmpty) {
+    if (query.isEmpty || _isSearching) {
       return;
     }
+    FocusScope.of(context).unfocus();
+    debugPrint('Location search query=$query');
+    final requestId = ++_searchRequestId;
     setState(() {
-      _searchFuture = _locationRepository.search(query);
+      _isSearching = true;
+      _searchError = null;
     });
+
+    try {
+      await Future<void>.delayed(const Duration(milliseconds: 300));
+      final results = await _locationRepository.search(query);
+      if (!mounted || requestId != _searchRequestId) {
+        return;
+      }
+      setState(() {
+        _searchResults = results;
+        _isSearching = false;
+      });
+    } catch (error, stackTrace) {
+      debugPrint('Location search failed\n$error\n$stackTrace');
+      if (!mounted || requestId != _searchRequestId) {
+        return;
+      }
+      setState(() {
+        _searchError = '지역 검색을 불러오지 못했어.';
+        _isSearching = false;
+      });
+    }
   }
 
   @override
@@ -566,7 +652,7 @@ class _LocationSheetState extends State<_LocationSheet> {
             ),
             const SizedBox(height: 14),
             OutlinedButton.icon(
-              onPressed: widget.onCurrentLocation,
+              onPressed: _isSearching ? null : widget.onCurrentLocation,
               icon: const Icon(Icons.my_location, size: 18),
               label: const Text('현재 위치 사용'),
               style: OutlinedButton.styleFrom(
@@ -603,8 +689,17 @@ class _LocationSheetState extends State<_LocationSheet> {
                 ),
                 const SizedBox(width: 8),
                 IconButton.filled(
-                  onPressed: _search,
-                  icon: const Icon(Icons.search),
+                  onPressed: _isSearching ? null : _search,
+                  icon: _isSearching
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Icon(Icons.search),
                   style: IconButton.styleFrom(
                     backgroundColor: AppColors.accent,
                     foregroundColor: Colors.white,
@@ -614,65 +709,55 @@ class _LocationSheetState extends State<_LocationSheet> {
               ],
             ),
             const SizedBox(height: 12),
-            if (_searchFuture != null)
-              FutureBuilder<List<LocationSearchResult>>(
-                future: _searchFuture,
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState != ConnectionState.done) {
-                    return const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 24),
-                      child: Center(
-                        child: CircularProgressIndicator(
-                          color: AppColors.accent,
+            if (_isSearching)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 24),
+                child: Center(
+                  child: CircularProgressIndicator(color: AppColors.accent),
+                ),
+              )
+            else if (_searchError != null)
+              _LocationMessage(
+                message: _searchError!,
+                actionLabel: '다시 검색',
+                onAction: _search,
+              )
+            else if (_controller.text.trim().isNotEmpty &&
+                _searchResults.isEmpty)
+              _LocationMessage(
+                message: '검색 결과가 없어.',
+                actionLabel: '입력한 지역으로 검색',
+                onAction: () => widget.onManualRegion(_controller.text),
+              )
+            else if (_searchResults.isNotEmpty)
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 260),
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: _searchResults.length,
+                  separatorBuilder: (_, _) =>
+                      const Divider(height: 1, color: AppColors.border),
+                  itemBuilder: (context, index) {
+                    final item = _searchResults[index];
+                    return ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(
+                        item.name,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.text,
                         ),
                       ),
+                      subtitle: Text(
+                        item.address,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(color: AppColors.sub),
+                      ),
+                      onTap: () => widget.onLocationSelected(item),
                     );
-                  }
-                  if (snapshot.hasError) {
-                    return _LocationMessage(
-                      message: '지역 검색을 불러오지 못했어.',
-                      actionLabel: '입력한 지역으로 검색',
-                      onAction: () => widget.onManualRegion(_controller.text),
-                    );
-                  }
-                  final results = snapshot.data ?? const [];
-                  if (results.isEmpty) {
-                    return _LocationMessage(
-                      message: '검색 결과가 없어.',
-                      actionLabel: '입력한 지역으로 검색',
-                      onAction: () => widget.onManualRegion(_controller.text),
-                    );
-                  }
-                  return ConstrainedBox(
-                    constraints: const BoxConstraints(maxHeight: 260),
-                    child: ListView.separated(
-                      shrinkWrap: true,
-                      itemCount: results.length,
-                      separatorBuilder: (_, _) =>
-                          const Divider(height: 1, color: AppColors.border),
-                      itemBuilder: (context, index) {
-                        final item = results[index];
-                        return ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          title: Text(
-                            item.name,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.text,
-                            ),
-                          ),
-                          subtitle: Text(
-                            item.address,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(color: AppColors.sub),
-                          ),
-                          onTap: () => widget.onLocationSelected(item),
-                        );
-                      },
-                    ),
-                  );
-                },
+                  },
+                ),
               ),
           ],
         ),
@@ -870,8 +955,9 @@ class _RecommendationLoading extends StatelessWidget {
 
 class _RecommendationError extends StatelessWidget {
   final String message;
+  final VoidCallback onRetry;
 
-  const _RecommendationError({required this.message});
+  const _RecommendationError({required this.message, required this.onRetry});
 
   @override
   Widget build(BuildContext context) {
@@ -881,15 +967,22 @@ class _RecommendationError extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(18),
           decoration: softBox(radius: AppRadius.card),
-          child: Text(
-            '추천을 불러오지 못했어요.\n$message',
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 14,
-              height: 1.5,
-              fontWeight: FontWeight.w600,
-              color: AppColors.darkSub,
-            ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '추천을 불러오지 못했어요.\n$message',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 14,
+                  height: 1.5,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.darkSub,
+                ),
+              ),
+              const SizedBox(height: 16),
+              PrimaryButton(label: '다시 불러오기', onTap: onRetry),
+            ],
           ),
         ),
       ),

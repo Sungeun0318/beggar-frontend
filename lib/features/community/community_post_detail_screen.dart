@@ -7,24 +7,41 @@ import 'package:beggar_app/core/utils/decorations.dart';
 import 'package:beggar_app/shared/widgets/app_header.dart';
 import 'package:beggar_app/shared/widgets/figma_frame.dart';
 
-class CommunityPostDetailScreen extends StatelessWidget {
+import 'package:beggar_app/data/api/api_client.dart';
+import 'package:beggar_app/data/repositories/room_free_repository.dart';
+
+class CommunityPostDetailScreen extends StatefulWidget {
   final VoidCallback onBack;
+  final int postId; // 게시글 ID 추가
 
-  const CommunityPostDetailScreen({super.key, required this.onBack});
+  const CommunityPostDetailScreen({
+    super.key,
+    required this.onBack,
+    this.postId = 1, // 프로토타입용 기본값
+  });
 
+  @override
+  State<CommunityPostDetailScreen> createState() => _CommunityPostDetailScreenState();
+}
+
+class _CommunityPostDetailScreenState extends State<CommunityPostDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return FigmaFrame(
       child: Stack(
         children: [
-          AppHeader.titled(title: '게시글', onBack: onBack),
+          AppHeader.titled(title: '게시글', onBack: widget.onBack),
           Positioned(
             top: AppSpacing.contentTop,
             left: 0,
             right: 0,
             bottom: 0,
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.pageH),
+              padding: const EdgeInsets.only(
+                left: AppSpacing.pageH,
+                right: AppSpacing.pageH,
+                bottom: 120, // 입력창 높이 고려
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: const [
@@ -48,6 +65,135 @@ class CommunityPostDetailScreen extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class CommunityCommentBar extends StatefulWidget {
+  final int postId;
+
+  const CommunityCommentBar({super.key, this.postId = 1});
+
+  @override
+  State<CommunityCommentBar> createState() => _CommunityCommentBarState();
+}
+
+class _CommunityCommentBarState extends State<CommunityCommentBar> {
+  final TextEditingController _commentController = TextEditingController();
+  final RoomFreeRepository _repository = RoomFreeRepository(ApiClient());
+
+  @override
+  void dispose() {
+    _commentController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _sendComment() async {
+    final content = _commentController.text.trim();
+    if (content.isEmpty) return;
+
+    try {
+      await _repository.createComment(widget.postId, content);
+      if (!mounted) return;
+      _commentController.clear();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('댓글이 등록되었습니다.')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('전송 실패: $e')),
+      );
+    }
+  }
+
+  Widget _buildCommentInput() {
+    final keyboardBottom = MediaQuery.viewInsetsOf(context).bottom;
+
+    return Positioned(
+      left: 0,
+      right: 0,
+      bottom: 0,
+      child: AnimatedPadding(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOutCubic,
+        padding: EdgeInsets.only(bottom: keyboardBottom),
+        child: Material(
+          color: Colors.transparent,
+          child: _CommentInputSurface(
+            controller: _commentController,
+            onSend: _sendComment,
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) => _buildCommentInput();
+}
+
+class _CommentInputSurface extends StatelessWidget {
+  final TextEditingController controller;
+  final VoidCallback onSend;
+
+  const _CommentInputSurface({
+    required this.controller,
+    required this.onSend,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 92,
+      padding: const EdgeInsets.fromLTRB(24, 12, 24, 18),
+      decoration: BoxDecoration(
+        color: const Color(0xF2FFFFFF),
+        border: const Border(
+          top: BorderSide(color: AppColors.border, width: 0.7),
+        ),
+      ),
+      child: Container(
+        height: 52,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: softBox(radius: AppRadius.chip, shadow: true),
+        child: Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: controller,
+                textInputAction: TextInputAction.send,
+                onSubmitted: (_) => onSend(),
+                cursorColor: AppColors.accent,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.text,
+                ),
+                decoration: const InputDecoration(
+                  hintText: '댓글 입력',
+                  hintStyle: TextStyle(
+                    fontSize: 14,
+                    color: AppColors.placeholder,
+                    fontWeight: FontWeight.w700,
+                  ),
+                  border: InputBorder.none,
+                  isDense: true,
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+            ),
+            IconButton(
+              onPressed: onSend,
+              icon: const Icon(
+                Icons.send_outlined,
+                color: AppColors.accent,
+                size: 22,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

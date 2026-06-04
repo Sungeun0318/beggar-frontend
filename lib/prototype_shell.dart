@@ -239,6 +239,8 @@ class _PrototypeShellState extends State<PrototypeShell> {
               ),
             ),
           if (_page == PrototypePage.communityChat) const CommunityMessageBar(),
+          if (_page == PrototypePage.communityPostDetail)
+            const CommunityCommentBar(),
         ],
       ),
     );
