@@ -18,10 +18,22 @@ fun dartDefineValue(name: String): String? {
         ?.takeIf { it.isNotBlank() }
 }
 
+fun envFileValue(name: String): String? {
+    val envFile = rootProject.file("../.env")
+    if (!envFile.exists()) return null
+    return envFile.readLines()
+        .map { it.trim() }
+        .firstOrNull { it.isNotBlank() && !it.startsWith("#") && it.startsWith("$name=") }
+        ?.substringAfter("=")
+        ?.trim()
+        ?.takeIf { it.isNotBlank() }
+}
+
 val kakaoNativeAppKey =
     (project.findProperty("KAKAO_NATIVE_APP_KEY") as? String)?.takeIf { it.isNotBlank() }
         ?: System.getenv("KAKAO_NATIVE_APP_KEY")?.takeIf { it.isNotBlank() }
         ?: dartDefineValue("KAKAO_NATIVE_APP_KEY")
+        ?: envFileValue("KAKAO_NATIVE_APP_KEY")
         ?: "missing_kakao_native_app_key"
 
 android {
