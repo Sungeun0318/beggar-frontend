@@ -4,16 +4,85 @@ import 'package:beggar_app/core/theme/app_colors.dart';
 import 'package:beggar_app/core/theme/app_radius.dart';
 import 'package:beggar_app/core/theme/assets.dart';
 import 'package:beggar_app/core/utils/decorations.dart';
-import 'package:beggar_app/data/mock/mock_db.dart';
+import 'package:beggar_app/data/repositories/auth_repository.dart';
 import 'package:beggar_app/shared/widgets/figma_frame.dart';
-import 'package:beggar_app/shared/widgets/input_like.dart';
 import 'package:beggar_app/shared/widgets/primary_button.dart';
 
-class LoginScreen extends StatelessWidget {
+class LoginScreen extends StatefulWidget {
   final VoidCallback onLogin;
   final VoidCallback onSignup;
 
   const LoginScreen({super.key, required this.onLogin, required this.onSignup});
+
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  final AuthRepository _authRepository = AuthRepository();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  bool _isLoading = false;
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _login() async {
+    if (_isLoading) return;
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+    if (email.isEmpty || password.isEmpty) {
+      _showSnack('이메일과 비밀번호를 입력해줘.');
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+    try {
+      await _authRepository.signInWithEmail(email: email, password: password);
+      if (!mounted) return;
+      widget.onLogin();
+    } catch (error) {
+      _showSnack(error.toString());
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _loginWithKakao() async {
+    if (_isLoading) return;
+    setState(() {
+      _isLoading = true;
+    });
+    try {
+      await _authRepository.signInWithKakao();
+      if (!mounted) return;
+      widget.onLogin();
+    } catch (error) {
+      _showSnack(error.toString());
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  void _showSnack(String message) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -69,14 +138,25 @@ class LoginScreen extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      InputLike(
-                        label: MockDb.currentUser.email,
+                      _AuthTextField(
+                        controller: _emailController,
+                        hintText: '이메일',
                         icon: Icons.mail_outline,
+                        keyboardType: TextInputType.emailAddress,
                       ),
                       const SizedBox(height: 10),
-                      const InputLike(label: '비밀번호', icon: Icons.lock_outline),
+                      _AuthTextField(
+                        controller: _passwordController,
+                        hintText: '비밀번호',
+                        icon: Icons.lock_outline,
+                        obscureText: true,
+                      ),
                       const SizedBox(height: 12),
-                      PrimaryButton(label: '로그인', onTap: onLogin),
+                      PrimaryButton(
+                        label: _isLoading ? '로그인 중...' : '로그인',
+                        onTap: _login,
+                        enabled: !_isLoading,
+                      ),
                     ],
                   ),
                 ),
@@ -96,7 +176,7 @@ class LoginScreen extends StatelessWidget {
                     borderRadius: BorderRadius.circular(AppRadius.card),
                   ),
                   child: GestureDetector(
-                    onTap: onLogin,
+                    onTap: _isLoading ? null : _loginWithKakao,
                     child: const Center(
                       child: Text(
                         '카카오로 시작하기',
@@ -111,7 +191,7 @@ class LoginScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 14),
                 TextButton(
-                  onPressed: onSignup,
+                  onPressed: widget.onSignup,
                   child: const Text(
                     '아직 계정이 없나요? 회원가입',
                     style: TextStyle(
@@ -125,6 +205,41 @@ class LoginScreen extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _AuthTextField extends StatelessWidget {
+  final TextEditingController controller;
+  final String hintText;
+  final IconData icon;
+  final bool obscureText;
+  final TextInputType? keyboardType;
+
+  const _AuthTextField({
+    required this.controller,
+    required this.hintText,
+    required this.icon,
+    this.obscureText = false,
+    this.keyboardType,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: controller,
+      obscureText: obscureText,
+      keyboardType: keyboardType,
+      decoration: InputDecoration(
+        hintText: hintText,
+        prefixIcon: Icon(icon, color: AppColors.placeholder),
+        filled: true,
+        fillColor: AppColors.bg,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadius.compact),
+          borderSide: BorderSide.none,
+        ),
       ),
     );
   }

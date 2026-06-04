@@ -144,15 +144,15 @@ lib/
 ### api/
 
 #### `lib/data/api/api_client.dart`
-HTTP 클라이언트 래퍼. **TODO**: 패키지 결정(`dio` 권장) 후 구현.
+HTTP 클라이언트 래퍼. `package:http` 기반으로 구현됨.
 - 인터셉터: `TokenStorage`에서 JWT 읽어 Authorization 헤더에 주입
 - 401 응답 시 refresh 토큰으로 재발급 또는 로그아웃
-- 메서드 시그니처만 정의됨 (`get`, `post`)
+- `get`, `getList`, `post` 지원
 
 ### auth/
 
 #### `lib/data/auth/kakao_auth_service.dart`
-카카오 로그인 SDK 래퍼. **TODO**: `kakao_flutter_sdk_user` 패키지 추가 후 구현.
+카카오 로그인 SDK 래퍼. `kakao_flutter_sdk_user` 기반으로 구현됨.
 - `signInWithKakao()`: `isKakaoTalkInstalled` 확인 → `loginWithKakaoTalk` or `loginWithKakaoAccount` → OAuth 토큰 반환
 - 받은 토큰을 Spring 백엔드 `/auth/kakao`로 POST → 자체 JWT 받기
 - `signOut()`: SDK 로그아웃 + TokenStorage clear

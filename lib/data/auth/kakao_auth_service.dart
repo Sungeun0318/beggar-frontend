@@ -1,14 +1,24 @@
-// TODO(auth): 카카오 로그인 SDK 연동.
-// - 패키지: `kakao_flutter_sdk_user` pubspec 추가
-// - main()에서 KakaoSdk.init(nativeAppKey: ApiConfig.kakaoNativeAppKey)
-// - login(): isKakaoTalkInstalled → loginWithKakaoTalk / loginWithKakaoAccount
-// - 받은 OAuth 토큰을 Spring 백엔드 `/auth/kakao` 로 전송 → 자체 JWT 발급
+import 'package:flutter/foundation.dart';
+import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart';
+
 class KakaoAuthService {
-  Future<String> signInWithKakao() {
-    throw UnimplementedError('KakaoAuthService.signInWithKakao — SDK 연동 후 구현');
+  Future<String> signInWithKakao() async {
+    OAuthToken token;
+    if (!kIsWeb && await isKakaoTalkInstalled()) {
+      try {
+        debugPrint('Kakao login: try KakaoTalk');
+        token = await UserApi.instance.loginWithKakaoTalk();
+      } catch (error) {
+        debugPrint('KakaoTalk login failed, fallback to account login: $error');
+        token = await UserApi.instance.loginWithKakaoAccount();
+      }
+    } else {
+      debugPrint('Kakao login: try KakaoAccount');
+      token = await UserApi.instance.loginWithKakaoAccount();
+    }
+    debugPrint('Kakao login: OAuth token issued');
+    return token.accessToken;
   }
 
-  Future<void> signOut() {
-    throw UnimplementedError('KakaoAuthService.signOut — SDK 연동 후 구현');
-  }
+  Future<void> signOut() => UserApi.instance.logout();
 }
