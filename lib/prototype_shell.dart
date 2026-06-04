@@ -126,6 +126,7 @@ class _PrototypeShellState extends State<PrototypeShell> {
       case PrototypePage.communityPostDetail:
         child = CommunityPostDetailScreen(
           onBack: () => _go(PrototypePage.community),
+          postId: CommunityScreen.selectedPostId,
         );
       case PrototypePage.communityPostWrite:
         child = CommunityPostWriteScreen(
@@ -242,8 +243,6 @@ class _PrototypeShellState extends State<PrototypeShell> {
                 description: '같은 식당이나 장소에서 각자 계산해 여러 장으로 나뉜 영수증을 등록해요.',
               ),
             ),
-          if (_page == PrototypePage.communityPostDetail)
-            const CommunityCommentBar(),
         ],
       ),
     );

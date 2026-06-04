@@ -80,7 +80,12 @@ class _CommunityChatScreenState extends State<CommunityChatScreen> {
                 final newMessage = RoomFreeChat.fromJson(json);
                 if (mounted) {
                   setState(() {
-                    _messages.add(newMessage);
+                    // 중복 방지: 이미 목록에 있는 ID인 경우 추가하지 않음
+                    if (!_messages.any((m) => m.id == newMessage.id)) {
+                      // 만약 내가 보낸 임시 메시지(-1)가 있다면 제거 (서버 데이터로 대체)
+                      _messages.removeWhere((m) => m.id == -1 && m.message == newMessage.message);
+                      _messages.add(newMessage);
+                    }
                   });
                   _scrollToBottom();
                 }
@@ -114,8 +119,16 @@ class _CommunityChatScreenState extends State<CommunityChatScreen> {
 
     _messageController.clear();
     try {
-      await _repository.sendChat(text);
-      // 성공 시 백엔드에서 WebSocket으로 브로드캐스트할 것이므로 여기서 직접 추가하지 않음
+      final newMessage = await _repository.sendChat(text);
+      if (mounted) {
+        setState(() {
+          // WebSocket에서 먼저 받았을 수도 있으므로 여기서도 중복 체크
+          if (!_messages.any((m) => m.id == newMessage.id)) {
+            _messages.add(newMessage);
+          }
+        });
+        _scrollToBottom();
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -218,7 +231,7 @@ class _CommunityChatScreenState extends State<CommunityChatScreen> {
                     ),
                   ),
                   IconButton(
-                    onPressed: _sendMessage,
+                    onPressed: () => _sendMessage(),
                     icon: const Icon(Icons.send_outlined, color: AppColors.accent),
                   ),
                 ],

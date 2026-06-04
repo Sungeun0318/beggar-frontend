@@ -8,7 +8,10 @@ import 'package:beggar_app/shared/widgets/app_header.dart';
 import 'package:beggar_app/shared/widgets/figma_frame.dart';
 import 'package:beggar_app/shared/widgets/primary_button.dart';
 
-class CommunityPostWriteScreen extends StatelessWidget {
+import 'package:beggar_app/data/api/api_client.dart';
+import 'package:beggar_app/data/repositories/room_free_repository.dart';
+
+class CommunityPostWriteScreen extends StatefulWidget {
   final VoidCallback onBack;
   final VoidCallback onSubmit;
 
@@ -19,11 +22,58 @@ class CommunityPostWriteScreen extends StatelessWidget {
   });
 
   @override
+  State<CommunityPostWriteScreen> createState() => _CommunityPostWriteScreenState();
+}
+
+class _CommunityPostWriteScreenState extends State<CommunityPostWriteScreen> {
+  final _titleController = TextEditingController();
+  final _contentController = TextEditingController();
+  final _repository = RoomFreeRepository(ApiClient());
+  String _selectedTag = '절약팁';
+  bool _isSubmitting = false;
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _contentController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _handleSubmit() async {
+    final title = _titleController.text.trim();
+    final content = _contentController.text.trim();
+
+    if (title.isEmpty || content.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('제목과 내용을 입력해주세요.')),
+      );
+      return;
+    }
+
+    setState(() => _isSubmitting = true);
+    try {
+      await _repository.createPost(
+        title: title,
+        content: content,
+        tag: _selectedTag,
+      );
+      widget.onSubmit();
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('게시글 등록 실패: $e')),
+        );
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return FigmaFrame(
       child: Stack(
         children: [
-          AppHeader.titled(title: '글쓰기', onBack: onBack),
+          AppHeader.titled(title: '글쓰기', onBack: widget.onBack),
           Positioned(
             top: AppSpacing.contentTop,
             left: 0,
@@ -34,22 +84,31 @@ class CommunityPostWriteScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const _CategorySelector(),
+                  _CategorySelector(
+                    selectedTag: _selectedTag,
+                    onSelected: (tag) => setState(() => _selectedTag = tag),
+                  ),
                   const SizedBox(height: 16),
-                  const _InputBox(
+                  _InputBox(
                     label: '제목',
-                    value: '오늘 점심 8천원 이하 맛집 공유해요',
+                    controller: _titleController,
+                    hint: '제목을 입력해주세요',
                     height: 92,
                   ),
                   const SizedBox(height: 14),
-                  const _InputBox(
+                  _InputBox(
                     label: '내용',
-                    value: '가성비 좋은 식당이나 쿠폰 조합을 공유해보세요.',
+                    controller: _contentController,
+                    hint: '가성비 좋은 식당이나 쿠폰 조합을 공유해보세요.',
                     height: 204,
                     multiline: true,
                   ),
                   const SizedBox(height: 24),
-                  PrimaryButton(label: '게시하기', onTap: onSubmit),
+                  PrimaryButton(
+                    label: _isSubmitting ? '게시 중...' : '게시하기',
+                    onTap: () => _handleSubmit(),
+                    enabled: !_isSubmitting,
+                  ),
                   const SizedBox(height: AppSpacing.bottomSafe),
                 ],
               ),
@@ -62,17 +121,41 @@ class CommunityPostWriteScreen extends StatelessWidget {
 }
 
 class _CategorySelector extends StatelessWidget {
-  const _CategorySelector();
+  final String selectedTag;
+  final ValueChanged<String> onSelected;
+
+  const _CategorySelector({
+    required this.selectedTag,
+    required this.onSelected,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Row(
-      children: const [
-        Expanded(child: _CategoryChip(label: '절약팁', active: true)),
-        SizedBox(width: 8),
-        Expanded(child: _CategoryChip(label: '질문')),
-        SizedBox(width: 8),
-        Expanded(child: _CategoryChip(label: '같이해요')),
+      children: [
+        Expanded(
+          child: _CategoryChip(
+            label: '절약팁',
+            active: selectedTag == '절약팁',
+            onTap: () => onSelected('절약팁'),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _CategoryChip(
+            label: '질문',
+            active: selectedTag == '질문',
+            onTap: () => onSelected('질문'),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _CategoryChip(
+            label: '같이해요',
+            active: selectedTag == '같이해요',
+            onTap: () => onSelected('같이해요'),
+          ),
+        ),
       ],
     );
   }
@@ -81,25 +164,34 @@ class _CategorySelector extends StatelessWidget {
 class _CategoryChip extends StatelessWidget {
   final String label;
   final bool active;
+  final VoidCallback onTap;
 
-  const _CategoryChip({required this.label, this.active = false});
+  const _CategoryChip({
+    required this.label,
+    required this.onTap,
+    this.active = false,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 38,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: active ? AppColors.accent : Colors.white,
-        borderRadius: BorderRadius.circular(AppRadius.chip),
-        border: Border.all(color: active ? AppColors.accent : AppColors.border),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: 13,
-          fontWeight: FontWeight.w800,
-          color: active ? Colors.white : AppColors.sub,
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 38,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: active ? AppColors.accent : Colors.white,
+          borderRadius: BorderRadius.circular(AppRadius.chip),
+          border:
+              Border.all(color: active ? AppColors.accent : AppColors.border),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w800,
+            color: active ? Colors.white : AppColors.sub,
+          ),
         ),
       ),
     );
@@ -108,13 +200,15 @@ class _CategoryChip extends StatelessWidget {
 
 class _InputBox extends StatelessWidget {
   final String label;
-  final String value;
+  final TextEditingController controller;
+  final String hint;
   final double height;
   final bool multiline;
 
   const _InputBox({
     required this.label,
-    required this.value,
+    required this.controller,
+    required this.hint,
     this.height = 84,
     this.multiline = false,
   });
@@ -139,16 +233,28 @@ class _InputBox extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 6),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 15,
-              height: 1.4,
-              fontWeight: FontWeight.w700,
-              color: AppColors.placeholder,
+          Expanded(
+            child: TextField(
+              controller: controller,
+              maxLines: multiline ? 10 : 1,
+              style: const TextStyle(
+                fontSize: 15,
+                height: 1.4,
+                fontWeight: FontWeight.w700,
+                color: AppColors.text,
+              ),
+              decoration: InputDecoration(
+                hintText: hint,
+                hintStyle: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.placeholder,
+                ),
+                border: InputBorder.none,
+                isDense: true,
+                contentPadding: EdgeInsets.zero,
+              ),
             ),
-            maxLines: multiline ? 5 : 1,
-            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),

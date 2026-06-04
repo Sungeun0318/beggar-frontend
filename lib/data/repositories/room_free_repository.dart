@@ -32,7 +32,23 @@ class RoomFreeRepository {
     );
   }
 
-  /// 4. 전체 채팅 내역 조회
+  /// 4. 게시글 작성
+  Future<void> createPost({
+    required String title,
+    required String content,
+    required String tag,
+  }) async {
+    await _api.post(
+      '/api/freerooms/posts',
+      body: {
+        'title': title,
+        'content': content,
+        'tag': tag,
+      },
+    );
+  }
+
+  /// 5. 전체 채팅 내역 조회
   Future<List<RoomFreeChat>> getChatHistory() async {
     final response = await _api.get('/api/freerooms/chats');
     final List<dynamic> data = response['data'];
@@ -40,7 +56,20 @@ class RoomFreeRepository {
   }
 
   /// 5. 채팅 메시지 전송
-  Future<void> sendChat(String message) async {
-    await _api.post('/api/freerooms/chats', body: {'content': message});
+  Future<RoomFreeChat> sendChat(String message) async {
+    final response = await _api.post('/api/freerooms/chats', body: {'content': message});
+    
+    // 백엔드에서 data를 null로 줄 경우를 대비한 방어 코드
+    if (response['data'] == null) {
+      return RoomFreeChat(
+        id: -1, // 임시 ID
+        sender: '나',
+        message: message,
+        createdAt: DateTime.now(),
+        isMine: true,
+      );
+    }
+    
+    return RoomFreeChat.fromJson(response['data']);
   }
 }

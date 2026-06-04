@@ -7,10 +7,17 @@ import 'package:beggar_app/core/utils/decorations.dart';
 import 'package:beggar_app/shared/widgets/app_header.dart';
 import 'package:beggar_app/shared/widgets/figma_frame.dart';
 
-class CommunityScreen extends StatelessWidget {
+import 'package:beggar_app/data/api/api_client.dart';
+import 'package:beggar_app/data/models/room_free_post.dart';
+import 'package:beggar_app/data/repositories/room_free_repository.dart';
+
+class CommunityScreen extends StatefulWidget {
   final VoidCallback onOpenChat;
   final VoidCallback onOpenPost;
   final VoidCallback onWritePost;
+
+  // 셸(PrototypeShell) 수정을 피하기 위해 정적 변수로 선택된 ID 공유
+  static int selectedPostId = 1;
 
   const CommunityScreen({
     super.key,
@@ -18,6 +25,40 @@ class CommunityScreen extends StatelessWidget {
     required this.onOpenPost,
     required this.onWritePost,
   });
+
+  @override
+  State<CommunityScreen> createState() => _CommunityScreenState();
+}
+
+class _CommunityScreenState extends State<CommunityScreen> {
+  final _repository = RoomFreeRepository(ApiClient());
+  List<RoomFreePost> _posts = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPosts();
+  }
+
+  Future<void> _loadPosts() async {
+    try {
+      final posts = await _repository.getPosts();
+      if (mounted) {
+        setState(() {
+          _posts = posts;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('게시글을 불러오지 못했습니다: $e')),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -30,88 +71,96 @@ class CommunityScreen extends StatelessWidget {
             left: 0,
             right: 0,
             bottom: 0,
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.pageH),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    '모든 사용자들과 절약 팁과 모임 이야기를 나눠요.',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: AppColors.sub,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-                  const _SearchBox(),
-                  const SizedBox(height: 18),
-                  _CommunityChatCard(onTap: onOpenChat),
-                  const SizedBox(height: 22),
-                  Row(
-                    children: [
-                      const Text(
-                        '게시판',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.text,
-                          letterSpacing: -0.4,
-                        ),
+            child: RefreshIndicator(
+              onRefresh: _loadPosts,
+              color: AppColors.accent,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: AppSpacing.pageH),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      '모든 사용자들과 절약 팁과 모임 이야기를 나눠요.',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: AppColors.sub,
+                        fontWeight: FontWeight.w600,
                       ),
-                      const Spacer(),
-                      GestureDetector(
-                        onTap: onWritePost,
-                        behavior: HitTestBehavior.opaque,
-                        child: const Row(
-                          children: [
-                            Icon(
-                              Icons.edit_outlined,
-                              size: 18,
-                              color: AppColors.accent,
-                            ),
-                            SizedBox(width: 4),
-                            Text(
-                              '글쓰기',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w800,
+                    ),
+                    const SizedBox(height: 18),
+                    const _SearchBox(),
+                    const SizedBox(height: 18),
+                    _CommunityChatCard(onTap: widget.onOpenChat),
+                    const SizedBox(height: 22),
+                    Row(
+                      children: [
+                        const Text(
+                          '게시판',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.text,
+                            letterSpacing: -0.4,
+                          ),
+                        ),
+                        const Spacer(),
+                        GestureDetector(
+                          onTap: widget.onWritePost,
+                          behavior: HitTestBehavior.opaque,
+                          child: const Row(
+                            children: [
+                              Icon(
+                                Icons.edit_outlined,
+                                size: 18,
                                 color: AppColors.accent,
                               ),
-                            ),
-                          ],
+                              SizedBox(width: 4),
+                              Text(
+                                '글쓰기',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppColors.accent,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  const _BoardTabs(),
-                  const SizedBox(height: 14),
-                  _CommunityPostCard(
-                    tag: '절약팁',
-                    title: '오늘 점심 8천원 이하 맛집 공유해요',
-                    body: '강남역 근처에서 가성비 괜찮았던 곳 있으면 같이 추천해봐요.',
-                    meta: '댓글 12 · 방금 전',
-                    onTap: onOpenPost,
-                  ),
-                  const SizedBox(height: 14),
-                  _CommunityPostCard(
-                    tag: '질문',
-                    title: '데이트 예산 3만원이면 어떻게 짜?',
-                    body: '밥이랑 카페까지 가고 싶은데 괜찮은 루트 있으면 알려줘.',
-                    meta: '댓글 8 · 9분 전',
-                    onTap: onOpenPost,
-                  ),
-                  const SizedBox(height: 14),
-                  _CommunityPostCard(
-                    tag: '같이해요',
-                    title: '이번 주말 홍대 근처 절약 모임',
-                    body: '카페 대신 무료 전시 보고 산책하는 코스로 생각 중이에요.',
-                    meta: '댓글 5 · 18분 전',
-                    onTap: onOpenPost,
-                  ),
-                  const SizedBox(height: AppSpacing.bottomSafe),
-                ],
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    const _BoardTabs(),
+                    const SizedBox(height: 14),
+                    if (_isLoading)
+                      const Center(
+                        child: Padding(
+                          padding: EdgeInsets.only(top: 40),
+                          child: CircularProgressIndicator(),
+                        ),
+                      )
+                    else if (_posts.isEmpty)
+                      const Center(
+                        child: Padding(
+                          padding: EdgeInsets.only(top: 40),
+                          child: Text('등록된 게시글이 없습니다.'),
+                        ),
+                      )
+                    else
+                      ..._posts.map((post) => Padding(
+                            padding: const EdgeInsets.only(bottom: 14),
+                            child: _CommunityPostCard(
+                              post: post,
+                              onTap: () {
+                                CommunityScreen.selectedPostId = post.id;
+                                widget.onOpenPost();
+                              },
+                            ),
+                          )),
+                    const SizedBox(height: AppSpacing.bottomSafe),
+                  ],
+                ),
               ),
             ),
           ),
@@ -253,17 +302,11 @@ class _BoardTab extends StatelessWidget {
 }
 
 class _CommunityPostCard extends StatelessWidget {
-  final String tag;
-  final String title;
-  final String body;
-  final String meta;
+  final RoomFreePost post;
   final VoidCallback onTap;
 
   const _CommunityPostCard({
-    required this.tag,
-    required this.title,
-    required this.body,
-    required this.meta,
+    required this.post,
     required this.onTap,
   });
 
@@ -281,15 +324,13 @@ class _CommunityPostCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              width: 62,
-              height: 26,
-              alignment: Alignment.center,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               decoration: BoxDecoration(
                 color: AppColors.accentBg,
                 borderRadius: BorderRadius.circular(AppRadius.chip),
               ),
               child: Text(
-                tag,
+                post.tag,
                 style: const TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w800,
@@ -299,7 +340,7 @@ class _CommunityPostCard extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             Text(
-              title,
+              post.title,
               style: const TextStyle(
                 fontSize: 17,
                 fontWeight: FontWeight.w800,
@@ -311,7 +352,7 @@ class _CommunityPostCard extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              body,
+              post.content,
               style: const TextStyle(
                 fontSize: 13,
                 height: 1.5,
@@ -323,7 +364,7 @@ class _CommunityPostCard extends StatelessWidget {
             ),
             const Spacer(),
             Text(
-              meta,
+              '댓글 ${post.commentCount} · ${post.author} · ${_formatDate(post.createdAt)}',
               style: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
@@ -334,5 +375,14 @@ class _CommunityPostCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  String _formatDate(DateTime date) {
+    final now = DateTime.now();
+    final diff = now.difference(date);
+    if (diff.inMinutes < 1) return '방금 전';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}분 전';
+    if (diff.inHours < 24) return '${diff.inHours}시간 전';
+    return '${date.month}월 ${date.day}일';
   }
 }
