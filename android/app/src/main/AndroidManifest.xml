@@ -6,7 +6,8 @@
     <application
         android:label="beggar_app"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:usesCleartextTraffic="true">
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -35,7 +36,7 @@
             android:name="flutterEmbedding"
             android:value="2" />
         <activity
-            android:name="com.kakao.sdk.auth.AuthCodeHandlerActivity"
+            android:name="com.kakao.sdk.flutter.auth.AuthCodeHandlerActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
