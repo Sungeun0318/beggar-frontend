@@ -70,19 +70,21 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
     });
 
     try {
-      final response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          "roomName": _roomNameController.text,
-          "tags": [_selectedTag],
-          "isFriends": false,
-          "location": _selectedLocation!.name.isEmpty
-              ? _selectedLocation!.address
-              : _selectedLocation!.name,
-          "maxMemberCount": _maxMemberCount,
-        }),
-      ).timeout(ApiConfig.receiveTimeout);
+      final response = await http
+          .post(
+            url,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              "roomName": _roomNameController.text,
+              "tags": [_selectedTag],
+              "isFriends": false,
+              "location": _selectedLocation!.name.isEmpty
+                  ? _selectedLocation!.address
+                  : _selectedLocation!.name,
+              "maxMemberCount": _maxMemberCount,
+            }),
+          )
+          .timeout(ApiConfig.receiveTimeout);
 
       if (response.statusCode == 200) {
         final jsonResponse = jsonDecode(utf8.decode(response.bodyBytes));
@@ -100,9 +102,14 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
                     ? _selectedLocation!.address
                     : _selectedLocation!.name,
                 maxMemberCount: _maxMemberCount,
-                inviteCode: result['roomCode'] ?? 'abc001', // 🎲 백엔드가 발급한 진짜 12자리 코드 매핑!
-                onBack: widget.onBack,
-                onNext: widget.onNext,
+                inviteCode:
+                    result['roomCode'] ??
+                    'abc001', // 🎲 백엔드가 발급한 진짜 12자리 코드 매핑!
+                onBack: () => Navigator.of(context).pop(),
+                onNext: () {
+                  Navigator.of(context).pop();
+                  widget.onNext();
+                },
               ),
             ),
           );
@@ -202,8 +209,8 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
                       label: _selectedLocation == null
                           ? _locationPlaceholder
                           : (_selectedLocation!.name.isEmpty
-                          ? _selectedLocation!.address
-                          : _selectedLocation!.name),
+                                ? _selectedLocation!.address
+                                : _selectedLocation!.name),
                       icon: Icons.location_on_outlined,
                       selected: _selectedLocation != null,
                     ),
@@ -327,10 +334,10 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
   }
 
   Widget _buildTagChoice(
-      String label,
-      IconData icon, {
-        bool isFullWidth = false,
-      }) {
+    String label,
+    IconData icon, {
+    bool isFullWidth = false,
+  }) {
     final isSelected = _selectedTag == label;
     Widget choice = ChoiceBox(icon: icon, label: label);
 
@@ -343,9 +350,9 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
       child: Container(
         decoration: isSelected
             ? BoxDecoration(
-          border: Border.all(color: AppColors.brown, width: 2),
-          borderRadius: BorderRadius.circular(AppRadius.compact),
-        )
+                border: Border.all(color: AppColors.brown, width: 2),
+                borderRadius: BorderRadius.circular(AppRadius.compact),
+              )
             : null,
         child: choice,
       ),
@@ -381,7 +388,7 @@ class _SearchAddressPageState extends State<SearchAddressPage> {
     _debounceTimer?.cancel();
     _debounceTimer = Timer(
       const Duration(milliseconds: 350),
-          () => _searchLocation(query),
+      () => _searchLocation(query),
     );
   }
 
@@ -463,63 +470,63 @@ class _SearchAddressPageState extends State<SearchAddressPage> {
             Expanded(
               child: _isLoading
                   ? const Center(
-                child: CircularProgressIndicator(color: AppColors.brown),
-              )
+                      child: CircularProgressIndicator(color: AppColors.brown),
+                    )
                   : _errorMessage != null
                   ? Center(
-                child: Text(
-                  _errorMessage!,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: AppColors.sub),
-                ),
-              )
+                      child: Text(
+                        _errorMessage!,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: AppColors.sub),
+                      ),
+                    )
                   : _searchResults.isEmpty
                   ? const Center(
-                child: Text(
-                  '검색 결과가 없습니다.\n궁금한 지하철역 명칭을 입력창에 쳐보세요!',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: AppColors.sub),
-                ),
-              )
+                      child: Text(
+                        '검색 결과가 없습니다.\n궁금한 지하철역 명칭을 입력창에 쳐보세요!',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: AppColors.sub),
+                      ),
+                    )
                   : ListView.builder(
-                itemCount: _searchResults.length,
-                itemBuilder: (context, index) {
-                  final item = _searchResults[index];
-                  final placeName = item.name.isEmpty
-                      ? item.address
-                      : item.name;
-                  final addressName = item.address;
+                      itemCount: _searchResults.length,
+                      itemBuilder: (context, index) {
+                        final item = _searchResults[index];
+                        final placeName = item.name.isEmpty
+                            ? item.address
+                            : item.name;
+                        final addressName = item.address;
 
-                  return ListTile(
-                    leading: const Icon(
-                      Icons.location_on_outlined,
-                      color: AppColors.brown,
+                        return ListTile(
+                          leading: const Icon(
+                            Icons.location_on_outlined,
+                            color: AppColors.brown,
+                          ),
+                          title: Text(
+                            placeName,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                            ),
+                          ),
+                          subtitle: Text(
+                            addressName,
+                            style: const TextStyle(
+                              color: AppColors.sub,
+                              fontSize: 12,
+                            ),
+                          ),
+                          trailing: const Icon(
+                            Icons.arrow_forward_ios,
+                            size: 12,
+                            color: AppColors.sub,
+                          ),
+                          onTap: () {
+                            Navigator.pop(context, item);
+                          },
+                        );
+                      },
                     ),
-                    title: Text(
-                      placeName,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                      ),
-                    ),
-                    subtitle: Text(
-                      addressName,
-                      style: const TextStyle(
-                        color: AppColors.sub,
-                        fontSize: 12,
-                      ),
-                    ),
-                    trailing: const Icon(
-                      Icons.arrow_forward_ios,
-                      size: 12,
-                      color: AppColors.sub,
-                    ),
-                    onTap: () {
-                      Navigator.pop(context, item);
-                    },
-                  );
-                },
-              ),
             ),
           ],
         ),

@@ -142,7 +142,7 @@ class _PrototypeShellState extends State<PrototypeShell> {
           onBack: () => _go(
             _roomTabIndex == 1 ? PrototypePage.community : PrototypePage.home,
           ),
-          onNext: () => _go(PrototypePage.invite),
+          onNext: () => _go(PrototypePage.budgetInput),
         );
       case PrototypePage.invite:
         child = InviteRoomScreen(
