@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -5,7 +6,10 @@ import 'package:http/http.dart' as http;
 import 'package:beggar_app/core/theme/app_colors.dart';
 import 'package:beggar_app/core/theme/app_radius.dart';
 import 'package:beggar_app/core/theme/app_spacing.dart';
+import 'package:beggar_app/core/config/api_config.dart';
 import 'package:beggar_app/core/utils/decorations.dart';
+import 'package:beggar_app/data/models/location_search_result.dart';
+import 'package:beggar_app/data/repositories/location_repository.dart';
 import 'package:beggar_app/shared/widgets/app_header.dart';
 import 'package:beggar_app/shared/widgets/choice_box.dart';
 import 'package:beggar_app/shared/widgets/figma_frame.dart';
@@ -30,23 +34,37 @@ class CreateRoomScreen extends StatefulWidget {
 }
 
 class _CreateRoomScreenState extends State<CreateRoomScreen> {
+  static const String _locationPlaceholder = '예) 강남역, 홍대입구';
+
   final TextEditingController _roomNameController = TextEditingController();
-  String _selectedAddress = "예) 강남역, 홍대입구"; // 선택된 최종 역/장소 이름
+  LocationSearchResult? _selectedLocation;
   int _maxMemberCount = 4;
-  final List<String> _selectedTags = [];
+  String? _selectedTag;
+  bool _isCreatingRoom = false;
 
   // 백엔드로 데이터 전송 로직
   Future<void> _createNewRoom() async {
+    if (_isCreatingRoom) {
+      return;
+    }
     if (_roomNameController.text.trim().isEmpty) {
       _showSnackBar('거지방 이름을 입력해 주세요!');
       return;
     }
-    if (_selectedAddress == "예) 강남역, 홍대입구") {
+    if (_selectedLocation == null) {
       _showSnackBar('모임 장소(지하철역 등)를 검색해 주세요!');
       return;
     }
+    if (_selectedTag == null) {
+      _showSnackBar('모임 태그를 선택해 주세요!');
+      return;
+    }
 
-    final url = Uri.parse('http://10.0.2.2:8080/rooms');
+    final url = Uri.parse('${ApiConfig.baseUrl}/rooms');
+
+    setState(() {
+      _isCreatingRoom = true;
+    });
 
     try {
       final response = await http.post(
@@ -54,37 +72,46 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           "roomName": _roomNameController.text,
-          "tags": _selectedTags,
+          "tags": [_selectedTag],
           "isFriends": false,
-          "location": _selectedAddress, // 카카오 리스트에서 선택한 역 이름 글자 전송
-          "maxMemberCount": _maxMemberCount
+          "location": _selectedLocation!.address.isEmpty
+              ? _selectedLocation!.name
+              : _selectedLocation!.address,
+          "maxMemberCount": _maxMemberCount,
         }),
-      );
+      ).timeout(ApiConfig.receiveTimeout);
 
       if (response.statusCode == 200) {
         final result = jsonDecode(utf8.decode(response.bodyBytes));
         debugPrint("방 생성 성공: $result");
         widget.onNext();
       } else {
-        debugPrint("서버 에러: ${response.statusCode}");
+        final body = utf8.decode(response.bodyBytes);
+        debugPrint("서버 에러: ${response.statusCode} $body");
+        _showSnackBar('방 생성에 실패했어. (${response.statusCode})');
       }
     } catch (e) {
       debugPrint("연결 실패: $e");
+      _showSnackBar('서버와 연결하지 못했어.');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isCreatingRoom = false;
+        });
+      }
     }
   }
 
   void _toggleTag(String tag) {
     setState(() {
-      if (_selectedTags.contains(tag)) {
-        _selectedTags.remove(tag);
-      } else {
-        _selectedTags.add(tag);
-      }
+      _selectedTag = _selectedTag == tag ? null : tag;
     });
   }
 
   void _showSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -106,7 +133,12 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
             right: 0,
             bottom: 0,
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.pageH),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.pageH,
+                0,
+                AppSpacing.pageH,
+                132,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -132,7 +164,7 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
                   // 🌟 장소 칸 터치 시 카카오 진짜 키보드 검색창 화면으로 이동!
                   GestureDetector(
                     onTap: () async {
-                      final result = await Navigator.push<String>(
+                      final result = await Navigator.push<LocationSearchResult>(
                         context,
                         MaterialPageRoute(
                           builder: (context) => const SearchAddressPage(),
@@ -141,13 +173,18 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
 
                       if (result != null) {
                         setState(() {
-                          _selectedAddress = result; // 카카오가 찾아준 장소 명칭 안착!
+                          _selectedLocation = result;
                         });
                       }
                     },
                     child: InputLike(
-                      label: _selectedAddress,
+                      label: _selectedLocation == null
+                          ? _locationPlaceholder
+                          : (_selectedLocation!.name.isEmpty
+                                ? _selectedLocation!.address
+                                : _selectedLocation!.name),
                       icon: Icons.location_on_outlined,
+                      selected: _selectedLocation != null,
                     ),
                   ),
                   const SizedBox(height: 38),
@@ -170,7 +207,11 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  _buildTagChoice('기타 요식업', Icons.restaurant, isFullWidth: true),
+                  _buildTagChoice(
+                    '기타 요식업',
+                    Icons.restaurant,
+                    isFullWidth: true,
+                  ),
                   const SizedBox(height: 38),
 
                   const SectionTitle('몇 명이서 모이나요?'),
@@ -184,19 +225,28 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
                         const CircleAvatar(
                           radius: 20,
                           backgroundColor: AppColors.bg,
-                          child: Icon(Icons.groups_outlined, color: AppColors.brown),
+                          child: Icon(
+                            Icons.groups_outlined,
+                            color: AppColors.brown,
+                          ),
                         ),
                         const SizedBox(width: 12),
                         const Text(
                           '참여 인원',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.darkSub),
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.darkSub,
+                          ),
                         ),
                         const Spacer(),
 
                         GestureDetector(
                           onTap: () {
                             if (_maxMemberCount > 2) {
-                              setState(() { _maxMemberCount--; });
+                              setState(() {
+                                _maxMemberCount--;
+                              });
                             }
                           },
                           child: const RoundIcon(icon: Icons.remove),
@@ -204,14 +254,19 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
                         const SizedBox(width: 16),
                         Text(
                           '$_maxMemberCount',
-                          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                         const SizedBox(width: 16),
 
                         GestureDetector(
                           onTap: () {
                             if (_maxMemberCount < 100) {
-                              setState(() { _maxMemberCount++; });
+                              setState(() {
+                                _maxMemberCount++;
+                              });
                             }
                           },
                           child: const RoundIcon(icon: Icons.add),
@@ -222,7 +277,11 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
                   const SizedBox(height: 12),
                   const Text(
                     '* 최소 2명부터 최대 100명까지 참여 가능해요.',
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.sub),
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.sub,
+                    ),
                   ),
                   const SizedBox(height: 34),
                   const InfoCard(
@@ -231,7 +290,11 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
                     body: '가장 낮은 금액 기준으로\n오늘의 총예산이 정해져요.',
                   ),
                   const SizedBox(height: AppSpacing.gap24),
-                  PrimaryButton(label: '방 만들기', onTap: _createNewRoom),
+                  PrimaryButton(
+                    label: _isCreatingRoom ? '방 만드는 중...' : '방 만들기',
+                    onTap: _createNewRoom,
+                    enabled: !_isCreatingRoom,
+                  ),
                   const SizedBox(height: AppSpacing.gap24),
                 ],
               ),
@@ -242,8 +305,12 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
     );
   }
 
-  Widget _buildTagChoice(String label, IconData icon, {bool isFullWidth = false}) {
-    final isSelected = _selectedTags.contains(label);
+  Widget _buildTagChoice(
+    String label,
+    IconData icon, {
+    bool isFullWidth = false,
+  }) {
+    final isSelected = _selectedTag == label;
     Widget choice = ChoiceBox(icon: icon, label: label);
 
     if (isFullWidth) {
@@ -255,9 +322,9 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
       child: Container(
         decoration: isSelected
             ? BoxDecoration(
-          border: Border.all(color: AppColors.brown, width: 2),
-          borderRadius: BorderRadius.circular(AppRadius.compact),
-        )
+                border: Border.all(color: AppColors.brown, width: 2),
+                borderRadius: BorderRadius.circular(AppRadius.compact),
+              )
             : null,
         child: choice,
       ),
@@ -274,50 +341,63 @@ class SearchAddressPage extends StatefulWidget {
 }
 
 class _SearchAddressPageState extends State<SearchAddressPage> {
+  final LocationRepository _locationRepository = LocationRepository();
   final TextEditingController _searchController = TextEditingController();
-  List<Map<String, String>> _kakaoResults = []; // 카카오 장소 검색 결과 목록
+  List<LocationSearchResult> _searchResults = [];
+  Timer? _debounceTimer;
   bool _isLoading = false;
+  int _searchRequestId = 0;
+  String? _errorMessage;
 
-  // 카카오 로직 전용 REST API 실시간 호출 함수
-  Future<void> _searchFromKakao(String query) async {
+  @override
+  void dispose() {
+    _debounceTimer?.cancel();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onSearchChanged(String query) {
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(
+      const Duration(milliseconds: 350),
+      () => _searchLocation(query),
+    );
+  }
+
+  Future<void> _searchLocation(String query) async {
     if (query.trim().isEmpty) {
-      setState(() { _kakaoResults = []; });
+      setState(() {
+        _searchResults = [];
+        _isLoading = false;
+        _errorMessage = null;
+      });
       return;
     }
 
-    setState(() { _isLoading = true; });
-
-    // 카카오 로직 장소 검색 API 주소
-    final url = Uri.parse('https://dapi.kakao.com/v2/local/search/keyword.json?query=${Uri.encodeComponent(query)}');
+    final requestId = ++_searchRequestId;
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
 
     try {
-      final response = await http.get(
-        url,
-        headers: {
-          // 카카오 전용 REST API 인증키 (웹/앱 우회 공용 키 매핑)
-          'Authorization': 'KakaoAK 8ca6ba7bf5f2d65611df42a15f913d5a'
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final decodedData = jsonDecode(utf8.decode(response.bodyBytes));
-        final documents = decodedData['documents'] as List?;
-
-        if (documents != null) {
-          setState(() {
-            _kakaoResults = documents.map<Map<String, String>>((doc) {
-              return {
-                'placeName': doc['place_name'] ?? '', // 장소명 (ex: 강남역 2호선)
-                'addressName': doc['address_name'] ?? '', // 지번 주소 또는 도로명
-              };
-            }).toList();
-          });
-        }
+      final results = await _locationRepository.search(query);
+      if (!mounted || requestId != _searchRequestId) {
+        return;
       }
-    } catch (e) {
-      debugPrint("카카오 로컬 API 호출 실패: $e");
-    } finally {
-      setState(() { _isLoading = false; });
+      setState(() {
+        _searchResults = results;
+        _isLoading = false;
+      });
+    } catch (error, stackTrace) {
+      debugPrint('방 생성 지역 검색 실패\n$error\n$stackTrace');
+      if (!mounted || requestId != _searchRequestId) {
+        return;
+      }
+      setState(() {
+        _isLoading = false;
+        _errorMessage = '지역 검색을 불러오지 못했어.';
+      });
     }
   }
 
@@ -326,7 +406,10 @@ class _SearchAddressPageState extends State<SearchAddressPage> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('내 근처 역 검색', style: TextStyle(color: AppColors.brown, fontWeight: FontWeight.bold)),
+        title: const Text(
+          '내 근처 역 검색',
+          style: TextStyle(color: AppColors.brown, fontWeight: FontWeight.bold),
+        ),
         backgroundColor: Colors.white,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: AppColors.brown),
@@ -341,7 +424,9 @@ class _SearchAddressPageState extends State<SearchAddressPage> {
             // 카카오 검색어 타이핑 입력창
             TextField(
               controller: _searchController,
-              onChanged: (text) => _searchFromKakao(text), // 타이핑 ing 카카오 실시간 검색
+              onChanged: _onSearchChanged,
+              textInputAction: TextInputAction.search,
+              onSubmitted: _searchLocation,
               decoration: InputDecoration(
                 hintText: '지하철역 이름이나 장소를 입력하세요 (ex: 홍대입구)',
                 prefixIcon: const Icon(Icons.search, color: AppColors.brown),
@@ -358,27 +443,64 @@ class _SearchAddressPageState extends State<SearchAddressPage> {
             // 쭈루룩 나열될 카카오 실제 검색 결과 공간
             Expanded(
               child: _isLoading
-                  ? const Center(child: CircularProgressIndicator(color: AppColors.brown))
-                  : _kakaoResults.isEmpty
-                  ? const Center(child: Text('검색 결과가 없습니다.\n궁금한 지하철역 명칭을 입력창에 쳐보세요!', textAlign: TextAlign.center, style: TextStyle(color: AppColors.sub)))
+                  ? const Center(
+                      child: CircularProgressIndicator(color: AppColors.brown),
+                    )
+                  : _errorMessage != null
+                  ? Center(
+                      child: Text(
+                        _errorMessage!,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: AppColors.sub),
+                      ),
+                    )
+                  : _searchResults.isEmpty
+                  ? const Center(
+                      child: Text(
+                        '검색 결과가 없습니다.\n궁금한 지하철역 명칭을 입력창에 쳐보세요!',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: AppColors.sub),
+                      ),
+                    )
                   : ListView.builder(
-                itemCount: _kakaoResults.length,
-                itemBuilder: (context, index) {
-                  final item = _kakaoResults[index];
-                  final placeName = item['placeName']!;
-                  final addressName = item['addressName']!;
+                      itemCount: _searchResults.length,
+                      itemBuilder: (context, index) {
+                        final item = _searchResults[index];
+                        final placeName = item.name.isEmpty
+                            ? item.address
+                            : item.name;
+                        final addressName = item.address;
 
-                  return ListTile(
-                    leading: const Icon(Icons.location_on_outlined, color: AppColors.brown),
-                    title: Text(placeName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                    subtitle: Text(addressName, style: const TextStyle(color: AppColors.sub, fontSize: 12)),
-                    trailing: const Icon(Icons.arrow_forward_ios, size: 12, color: AppColors.sub),
-                    onTap: () {
-                      Navigator.pop(context, placeName);
-                    },
-                  );
-                },
-              ),
+                        return ListTile(
+                          leading: const Icon(
+                            Icons.location_on_outlined,
+                            color: AppColors.brown,
+                          ),
+                          title: Text(
+                            placeName,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                            ),
+                          ),
+                          subtitle: Text(
+                            addressName,
+                            style: const TextStyle(
+                              color: AppColors.sub,
+                              fontSize: 12,
+                            ),
+                          ),
+                          trailing: const Icon(
+                            Icons.arrow_forward_ios,
+                            size: 12,
+                            color: AppColors.sub,
+                          ),
+                          onTap: () {
+                            Navigator.pop(context, item);
+                          },
+                        );
+                      },
+                    ),
             ),
           ],
         ),

@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:beggar_app/core/config/api_config.dart';
+import 'package:http/http.dart' as http;
 
 class ApiClient {
   ApiClient({String? baseUrl}) : baseUrl = baseUrl ?? ApiConfig.baseUrl;
@@ -15,18 +15,10 @@ class ApiClient {
   }) async {
     final uri = _uri(path, query);
     return _sendWithRetry(() async {
-      final client = HttpClient()..connectionTimeout = ApiConfig.connectTimeout;
-      try {
-        final request = await client.getUrl(uri);
-        request.headers.set(HttpHeaders.acceptHeader, 'application/json');
-        request.headers.set(HttpHeaders.connectionHeader, 'close');
-        final response = await request
-            .close()
-            .timeout(ApiConfig.receiveTimeout);
-        return _decode(response);
-      } finally {
-        client.close(force: true);
-      }
+      final response = await http
+          .get(uri, headers: {'Accept': 'application/json'})
+          .timeout(ApiConfig.receiveTimeout);
+      return _decode(response);
     });
   }
 
@@ -36,39 +28,27 @@ class ApiClient {
   }) async {
     final uri = _uri(path, query);
     return _sendWithRetry(() async {
-      final client = HttpClient()..connectionTimeout = ApiConfig.connectTimeout;
-      try {
-        final request = await client.getUrl(uri);
-        request.headers.set(HttpHeaders.acceptHeader, 'application/json');
-        request.headers.set(HttpHeaders.connectionHeader, 'close');
-        final response = await request
-            .close()
-            .timeout(ApiConfig.receiveTimeout);
-        return _decodeList(response);
-      } finally {
-        client.close(force: true);
-      }
+      final response = await http
+          .get(uri, headers: {'Accept': 'application/json'})
+          .timeout(ApiConfig.receiveTimeout);
+      return _decodeList(response);
     });
   }
 
   Future<Map<String, dynamic>> post(String path, {Object? body}) async {
     final uri = _uri(path, {});
     return _sendWithRetry(() async {
-      final client = HttpClient()..connectionTimeout = ApiConfig.connectTimeout;
-      try {
-        final request = await client.postUrl(uri);
-        request.headers.set(HttpHeaders.contentTypeHeader, 'application/json');
-        request.headers.set(HttpHeaders.acceptHeader, 'application/json');
-        if (body != null) {
-          request.add(utf8.encode(jsonEncode(body)));
-        }
-        final response = await request
-            .close()
-            .timeout(ApiConfig.receiveTimeout);
-        return _decode(response);
-      } finally {
-        client.close(force: true);
-      }
+      final response = await http
+          .post(
+            uri,
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+            },
+            body: body == null ? null : jsonEncode(body),
+          )
+          .timeout(ApiConfig.receiveTimeout);
+      return _decode(response);
     });
   }
 
@@ -86,8 +66,8 @@ class ApiClient {
     );
   }
 
-  Future<Map<String, dynamic>> _decode(HttpClientResponse response) async {
-    final raw = await utf8.decodeStream(response);
+  Map<String, dynamic> _decode(http.Response response) {
+    final raw = utf8.decode(response.bodyBytes);
     final decoded = jsonDecode(raw) as Map<String, dynamic>;
     if (response.statusCode < 200 || response.statusCode >= 300) {
       final message = decoded['message'] as String? ?? 'API 요청에 실패했어요.';
@@ -96,8 +76,8 @@ class ApiClient {
     return decoded;
   }
 
-  Future<List<dynamic>> _decodeList(HttpClientResponse response) async {
-    final raw = await utf8.decodeStream(response);
+  List<dynamic> _decodeList(http.Response response) {
+    final raw = utf8.decode(response.bodyBytes);
     final decoded = jsonDecode(raw);
     if (response.statusCode < 200 || response.statusCode >= 300) {
       final message = decoded is Map<String, dynamic>
@@ -125,9 +105,7 @@ class ApiClient {
   }
 
   bool _shouldRetry(Object error) {
-    if (error is TimeoutException ||
-        error is SocketException ||
-        error is HttpException) {
+    if (error is TimeoutException || error is http.ClientException) {
       return true;
     }
     if (error is ApiException) {
@@ -145,7 +123,7 @@ class ApiClient {
     if (error is TimeoutException) {
       return const ApiException(408, '응답이 늦어지고 있어. 잠시 후 다시 시도해줘.');
     }
-    if (error is SocketException || error is HttpException) {
+    if (error is http.ClientException) {
       return const ApiException(0, '서버와 연결하지 못했어. 실행 주소를 확인해줘.');
     }
     if (error is Exception) {
