@@ -26,11 +26,17 @@ class ApiConfig {
     return _value('KAKAO_NATIVE_APP_KEY');
   }
 
+  // 🌟 이 부분을 웹 컴파일러가 안 터지게 정석대로 수정했습니다!
   static Future<String> _value(String key) async {
-    final definedValue = String.fromEnvironment(key);
-    if (definedValue.isNotEmpty) {
-      return definedValue;
+    if (key == 'KAKAO_NATIVE_APP_KEY') {
+      // 왼쪽에만 const를 붙여서 중복 경고(Unnecessary const)를 완벽히 피했습니다!
+      const definedValue = String.fromEnvironment('KAKAO_NATIVE_APP_KEY');
+      if (definedValue.isNotEmpty) return definedValue;
+    } else if (key == 'API_BASE_URL') {
+      const definedValue = String.fromEnvironment('API_BASE_URL');
+      if (definedValue.isNotEmpty) return definedValue;
     }
+
     return _envValue(key);
   }
 

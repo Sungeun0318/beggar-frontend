@@ -146,6 +146,10 @@ class _PrototypeShellState extends State<PrototypeShell> {
         );
       case PrototypePage.invite:
         child = InviteRoomScreen(
+          roomName: '테스트 거지방',
+          location: '명학역',
+          maxMemberCount: 4,
+          inviteCode: 'abc001', // 🎲 프로토타입 셸용 임시 더미 코드
           onBack: () => _go(PrototypePage.createRoom),
           onNext: () => _go(PrototypePage.budgetInput),
         );

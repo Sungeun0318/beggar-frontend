@@ -14,11 +14,20 @@ import 'package:beggar_app/shared/widgets/primary_button.dart';
 import 'package:beggar_app/shared/widgets/section_title.dart';
 
 class InviteRoomScreen extends StatelessWidget {
+  final String roomName;
+  final String location;
+  final int maxMemberCount;
+  final String inviteCode;
+
   final VoidCallback onBack;
   final VoidCallback onNext;
 
   const InviteRoomScreen({
     super.key,
+    required this.roomName,
+    required this.location,
+    required this.maxMemberCount,
+    required this.inviteCode,
     required this.onBack,
     required this.onNext,
   });
@@ -54,16 +63,18 @@ class InviteRoomScreen extends StatelessWidget {
                           fit: BoxFit.contain,
                         ),
                         const SizedBox(height: 16),
+                        // 🌟 진짜 백엔드 방 이름 반영!
                         Text(
-                          MockDb.room.name,
+                          roomName,
                           style: const TextStyle(
                             fontSize: 22,
                             fontWeight: FontWeight.w800,
                           ),
                         ),
                         const SizedBox(height: 8),
+                        // 🌟 진짜 백엔드 장소 및 최대 인원 반영!
                         Text(
-                          '${MockDb.room.location} · ${MockDb.room.memberCount}명',
+                          '$location · $maxMemberCount명',
                           style: const TextStyle(
                             fontSize: 14,
                             color: AppColors.sub,
@@ -89,12 +100,17 @@ class InviteRoomScreen extends StatelessWidget {
                                 size: 22,
                               ),
                               const SizedBox(width: 10),
-                              Text(
-                                'beggar.app/join/${MockDb.room.code}',
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.darkSub,
+                              // 🌟 가로 화면 터짐 억까를 방어하기 위해 Expanded와 Text옵션 추가!
+                              Expanded(
+                                child: Text(
+                                  'beggar.app/join/$inviteCode', // 🎲 자바가 준 진짜 생성 코드 안착!
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.darkSub,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
                                 ),
                               ),
                             ],
@@ -110,7 +126,7 @@ class InviteRoomScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 14),
                   ...MockDb.members.map(
-                    (member) => ParticipantTile(
+                        (member) => ParticipantTile(
                       name: member.name,
                       status: member.mine ? '방장' : '입장 완료',
                       active: member.mine,
