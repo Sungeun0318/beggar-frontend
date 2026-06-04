@@ -41,6 +41,6 @@ class RoomFreeRepository {
 
   /// 5. 채팅 메시지 전송
   Future<void> sendChat(String message) async {
-    await _api.post('/api/freerooms/chats', body: message);
+    await _api.post('/api/freerooms/chats', body: {'content': message});
   }
 }

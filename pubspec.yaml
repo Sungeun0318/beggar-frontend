@@ -21,6 +21,7 @@ dependencies:
   web: ^1.0.0
   js: ^0.7.1
   kakao_flutter_sdk_user: ^2.0.0+1
+  stomp_dart_client: ^3.0.0
 
 dev_dependencies:
   flutter_test:

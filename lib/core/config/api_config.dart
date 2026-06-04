@@ -14,6 +14,14 @@ class ApiConfig {
     return 'http://127.0.0.1:8080';
   }
 
+  static String get wsUrl {
+    final base = baseUrl;
+    if (base.startsWith('https://')) {
+      return base.replaceFirst('https://', 'wss://') + '/ws-stomp';
+    }
+    return base.replaceFirst('http://', 'ws://') + '/ws-stomp';
+  }
+
   static Future<String> kakaoNativeAppKey() {
     return _value('KAKAO_NATIVE_APP_KEY');
   }

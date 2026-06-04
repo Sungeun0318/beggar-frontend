@@ -1,85 +1,171 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:stomp_dart_client/stomp_dart_client.dart';
 
+import 'package:beggar_app/core/config/api_config.dart';
 import 'package:beggar_app/core/theme/app_colors.dart';
 import 'package:beggar_app/core/theme/app_radius.dart';
 import 'package:beggar_app/core/theme/app_spacing.dart';
 import 'package:beggar_app/core/utils/decorations.dart';
+import 'package:beggar_app/data/api/api_client.dart';
+import 'package:beggar_app/data/models/room_free_chat.dart';
+import 'package:beggar_app/data/repositories/room_free_repository.dart';
 import 'package:beggar_app/shared/widgets/app_header.dart';
 import 'package:beggar_app/shared/widgets/figma_frame.dart';
 
-class CommunityChatScreen extends StatelessWidget {
+class CommunityChatScreen extends StatefulWidget {
   final VoidCallback onBack;
 
   const CommunityChatScreen({super.key, required this.onBack});
+
+  @override
+  State<CommunityChatScreen> createState() => _CommunityChatScreenState();
+}
+
+class _CommunityChatScreenState extends State<CommunityChatScreen> {
+  final RoomFreeRepository _repository = RoomFreeRepository(ApiClient());
+  final List<RoomFreeChat> _messages = [];
+  final ScrollController _scrollController = ScrollController();
+  final TextEditingController _messageController = TextEditingController();
+  
+  StompClient? _stompClient;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadHistory();
+    _connectWebSocket();
+  }
+
+  @override
+  void dispose() {
+    _stompClient?.deactivate();
+    _scrollController.dispose();
+    _messageController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadHistory() async {
+    try {
+      final history = await _repository.getChatHistory();
+      if (mounted) {
+        setState(() {
+          _messages.addAll(history);
+          _isLoading = false;
+        });
+        _scrollToBottom();
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('채팅 내역을 불러오지 못했습니다: $e')),
+        );
+      }
+    }
+  }
+
+  void _connectWebSocket() {
+    _stompClient = StompClient(
+      config: StompConfig(
+        url: ApiConfig.wsUrl,
+        onConnect: (frame) {
+          debugPrint('STOMP Connected');
+          _stompClient?.subscribe(
+            destination: '/topic/chats',
+            callback: (frame) {
+              if (frame.body != null) {
+                final Map<String, dynamic> json = jsonDecode(frame.body!);
+                final newMessage = RoomFreeChat.fromJson(json);
+                if (mounted) {
+                  setState(() {
+                    _messages.add(newMessage);
+                  });
+                  _scrollToBottom();
+                }
+              }
+            },
+          );
+        },
+        onWebSocketError: (dynamic error) => debugPrint('WS Error: $error'),
+        onStompError: (frame) => debugPrint('STOMP Error: ${frame.body}'),
+        onDisconnect: (frame) => debugPrint('STOMP Disconnected'),
+      ),
+    );
+    _stompClient?.activate();
+  }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
+
+  Future<void> _sendMessage() async {
+    final text = _messageController.text.trim();
+    if (text.isEmpty) return;
+
+    _messageController.clear();
+    try {
+      await _repository.sendChat(text);
+      // 성공 시 백엔드에서 WebSocket으로 브로드캐스트할 것이므로 여기서 직접 추가하지 않음
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('메시지 전송 실패: $e')),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return FigmaFrame(
       child: Stack(
         children: [
-          AppHeader.titled(title: '전체 채팅방', onBack: onBack),
+          AppHeader.titled(title: '전체 채팅방', onBack: widget.onBack),
           Positioned(
             top: AppSpacing.contentTop,
             left: 0,
             right: 0,
-            bottom: 0,
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.pageH),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: const [
-                  _ChatNotice(),
-                  SizedBox(height: 18),
-                  _ChatBubble(
-                    name: '절약왕',
-                    message: '오늘 편의점 도시락 할인 정보 본 사람?',
-                    time: '오후 2:13',
-                  ),
-                  _ChatBubble(
-                    name: '거지판다',
-                    message: 'CU 앱에서 쿠폰 같이 쓰면 6천원대로 가능하더라.',
-                    time: '오후 2:14',
-                    mine: true,
-                  ),
-                  _ChatBubble(
-                    name: '소금커피',
-                    message: '명학역 쪽 착한가격 업소도 괜찮았어.',
-                    time: '오후 2:18',
-                  ),
-                  _ChatBubble(
-                    name: '한푼두푼',
-                    message: '게시판에 링크 올려줄게.',
-                    time: '오후 2:20',
-                  ),
-                  SizedBox(height: AppSpacing.bottomSafe),
-                ],
-              ),
-            ),
+            bottom: 92, // MessageBar height
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _messages.isEmpty
+                    ? const Center(child: Text('채팅 내역이 없습니다.'))
+                    : ListView.builder(
+                        controller: _scrollController,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.pageH,
+                          vertical: 18,
+                        ),
+                        itemCount: _messages.length + 1,
+                        itemBuilder: (context, index) {
+                          if (index == 0) return const _ChatNotice();
+                          final chat = _messages[index - 1];
+                          return _ChatBubble(
+                            name: chat.sender,
+                            message: chat.message,
+                            time: _formatTime(chat.createdAt),
+                            mine: chat.isMine,
+                          );
+                        },
+                      ),
           ),
+          _buildMessageBar(),
         ],
       ),
     );
   }
-}
 
-class CommunityMessageBar extends StatefulWidget {
-  const CommunityMessageBar({super.key});
-
-  @override
-  State<CommunityMessageBar> createState() => _CommunityMessageBarState();
-}
-
-class _CommunityMessageBarState extends State<CommunityMessageBar> {
-  final TextEditingController _messageController = TextEditingController();
-
-  @override
-  void dispose() {
-    _messageController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildMessageBar() {
     final keyboardBottom = MediaQuery.viewInsetsOf(context).bottom;
 
     return Positioned(
@@ -111,6 +197,7 @@ class _CommunityMessageBarState extends State<CommunityMessageBar> {
                     child: TextField(
                       controller: _messageController,
                       textInputAction: TextInputAction.send,
+                      onSubmitted: (_) => _sendMessage(),
                       cursorColor: AppColors.accent,
                       decoration: const InputDecoration(
                         hintText: '메시지 입력',
@@ -130,7 +217,10 @@ class _CommunityMessageBarState extends State<CommunityMessageBar> {
                       ),
                     ),
                   ),
-                  const Icon(Icons.send_outlined, color: AppColors.accent),
+                  IconButton(
+                    onPressed: _sendMessage,
+                    icon: const Icon(Icons.send_outlined, color: AppColors.accent),
+                  ),
                 ],
               ),
             ),
@@ -138,6 +228,13 @@ class _CommunityMessageBarState extends State<CommunityMessageBar> {
         ),
       ),
     );
+  }
+
+  String _formatTime(DateTime dateTime) {
+    final hour = dateTime.hour > 12 ? dateTime.hour - 12 : dateTime.hour;
+    final ampm = dateTime.hour >= 12 ? '오후' : '오전';
+    final minute = dateTime.minute.toString().padLeft(2, '0');
+    return '$ampm $hour:$minute';
   }
 }
 
@@ -147,10 +244,11 @@ class _ChatNotice extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      margin: const EdgeInsets.only(bottom: 18),
       padding: const EdgeInsets.all(16),
       decoration: softBox(color: AppColors.accentBg, radius: AppRadius.card),
       child: const Text(
-        '전체 사용자 128명이 참여 중이에요. 착한가격 업소, 쿠폰, 절약 루트를 자유롭게 공유해요.',
+        '전체 사용자들과 착한가격 업소, 쿠폰, 절약 루트를 자유롭게 공유해요.',
         style: TextStyle(
           fontSize: 13,
           height: 1.45,
@@ -191,15 +289,18 @@ class _ChatBubble extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              name,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
-                color: AppColors.accent,
+            if (!mine)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Text(
+                  name,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.accent,
+                  ),
+                ),
               ),
-            ),
-            const SizedBox(height: 6),
             Text(
               message,
               style: const TextStyle(
